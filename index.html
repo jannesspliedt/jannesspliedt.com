@@ -870,7 +870,8 @@
     'KkkkkkkkkkmmPP', '.KkkkkkkkkmmP.', '..KkkkkkkkkK..', '.ppp.KK.pppp..', 'pp.p.....p.pp.'];
   const MOLE_SHUT = MOLE.map((row, j) => j === 5 || j === 6 ? row.replace(/m/g, 'k') : row);
   const MOLE_PAL = { K: '#16131a', k: '#5b5364', h: '#7a7186', w: '#ffffff', P: '#f4a3b5', m: '#8a1c2e', p: '#f4a3b5' };
-  const hunterFits = (c, r) => r >= 0 && !isBed(c, r) && !isBed(c + 1, r) && !isBed(c, r + 1) && !isBed(c + 1, r + 1);
+  const solid = (c, r) => isBed(c, r) || ROOT[r * WCOLS + c] === 1;      // bedrock and tree roots cannot be eaten
+  const hunterFits = (c, r) => r >= 0 && !solid(c, r) && !solid(c + 1, r) && !solid(c, r + 1) && !solid(c + 1, r + 1);
   function hunterSpawn() {                       // far away from you, a good way down
     const c = W.body.length && W.body[0][0] > WCOLS / 2 ? 30 : WCOLS - 32, r = 64;
     H.body = []; for (let k = 0; k < 2; k++) H.body.push([c + (c < WCOLS / 2 ? -k : k) * 2, r]);
@@ -928,7 +929,7 @@
     showCard(-1);
     hint.textContent = matchMedia('(pointer: coarse)').matches ? 'touch and drag to steer' : 'arrow keys or wasd to dig';
   }
-  const blocked = (c, r) => r < 0 || isBed(c, r);
+  const blocked = (c, r) => r < 0 || solid(c, r);
   function wormMove(dc, dr, again) {
     const b = W.body, nc = b[0][0] + dc, nr = b[0][1] + dr;
     if (b[1] && b[1][0] === nc && b[1][1] === nr) {          // turning back: the tail becomes the head
@@ -1041,18 +1042,44 @@
     W.goal = [clamp(Math.floor(wx / WC), 0, WCOLS - 1), clamp(Math.floor(wy / WC), 0, WROWS - 1)];
   }
 
-  // the meadow above the worm world: flowers, a giant tree and insects (all own designs)
-  const TREE_X = (WSTART + 46) * WC;
+  // the meadow above the worm world: flowers, trees and insects (all own designs), drawn big to suit the worm
+  const PS = 2;                                  // the meadow's pixels are 2x2, so flowers and insects fit the worm's size
+  const TREES = [
+    { c: 22, kind: 'pine', S: 2 }, { c: 70, kind: 'oak', S: 1 }, { c: 104, kind: 'pine', S: 2 },
+    { c: 186, kind: 'oak', S: 2 },                // the giant
+    { c: 232, kind: 'oak', S: 1 }, { c: 262, kind: 'pine', S: 2 }
+  ].map(tr => ({ ...tr, x: tr.c * WC + 2 }));
+  const ROOT_LINES = {
+    oak: [[-6, 0, -22, 26], [4, 0, 18, 30], [0, 0, -2, 38], [-12, 2, -40, 16], [10, 2, 42, 20]],
+    pine: [[-2, 0, -12, 16], [2, 0, 12, 18], [0, 0, 0, 22]]
+  };
+  const TRUNK_W = { oak: 8, pine: 3 };
+  // roots are solid cells: the worm and the mole have to go round them
+  const ROOT = new Uint8Array(WCOLS * WROWS);
+  const keepFree = (c, r) => Math.abs(c - WSTART) < 3 || nearFood(c, r, 1) || finds.some(f => c >= f.c - 1 && c <= f.c + 2 && r >= f.r - 1 && r <= f.r + 2);
+  for (const tr of TREES) {
+    const S = tr.S, tw = TRUNK_W[tr.kind] * S;
+    for (let c = Math.floor((tr.x - tw) / WC); c <= Math.floor((tr.x + tw - 1) / WC); c++) for (let r = 0; r < 2; r++) if (!keepFree(c, r)) ROOT[r * WCOLS + c] = 1;
+    for (const [x0, y0, x1, y1] of ROOT_LINES[tr.kind]) {
+      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) * S;
+      for (let k = 0; k <= n; k++) {
+        const wx = tr.x + (x0 + (x1 - x0) * k / n) * S, wy = (y0 + (y1 - y0) * k / n) * S + Math.sin(k / 6) * 3;
+        const c = Math.floor(wx / WC), r = Math.floor(wy / WC);
+        if (r >= 0 && r < WROWS - 6 && !keepFree(c, r)) ROOT[r * WCOLS + c] = 1;
+      }
+    }
+  }
   const plants = [];
-  for (let x = 3, k = 0; x < WCOLS * WC - 3; k++) {
+  for (let x = 4, k = 0; x < WCOLS * WC - 4; k++) {
     const h = hash(k, 91);
-    if (Math.abs(x - TREE_X) > 40 && Math.abs(x - WSTART * WC - 2) > 6)
+    if (TREES.every(tr => Math.abs(x - tr.x) > TRUNK_W[tr.kind] * tr.S + 8) && Math.abs(x - WSTART * WC - 2) > 10)
       plants.push({ x, kind: h < 0.16 ? 'sun' : h < 0.38 ? 'tulip' : h < 0.56 ? 'blue' : h < 0.7 ? 'daisy' : 'grass',
         col: ['#d8443c', '#f07aa8', '#f6d24a', '#9a5ad0'][(hash(k, 92) * 4) | 0], tall: (hash(k, 93) * 4) | 0 });
-    x += 5 + ((hash(k, 94) * 8) | 0);
+    x += 10 + ((hash(k, 94) * 16) | 0);
   }
-  function drawPlant(p, x, g, t) {               // g = screen y of the ground
-    const sway = Math.round(Math.sin(t * 1.3 + p.x * 0.07) * 0.6), R = (c, a, b, w, h) => { ctx.fillStyle = c; ctx.fillRect(x + a, g + b, w, h); };
+  function drawPlant(p, x, g, t) {               // g = screen y of the ground; one plant pixel = PS screen pixels
+    const sway = Math.round(Math.sin(t * 1.3 + p.x * 0.03) * 0.6);
+    const R = (c, a, b, w, h) => { ctx.fillStyle = c; ctx.fillRect(x + a * PS, g + b * PS, w * PS, h * PS); };
     if (p.kind === 'grass') { R('#3f8a3a', 0, -2, 1, 2); R('#6cc35a', 1 + sway, -3, 1, 3); R('#3f8a3a', 2, -2, 1, 2); return; }
     if (p.kind === 'sun') {                      // sunflower: tall, with leaves and a big head
       const hgt = 14 + p.tall * 2;
@@ -1067,7 +1094,7 @@
       const hgt = 5 + (p.tall >> 1);
       R('#3f8a3a', 0, -hgt, 1, hgt); R('#4f9f3f', 1, -3, 1, 2);
       R(p.col, sway - 1, -hgt - 3, 3, 3); R(p.col, sway - 1, -hgt - 4, 1, 1); R(p.col, sway + 1, -hgt - 4, 1, 1);
-      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(x + sway - 1, g - hgt - 3, 1, 2);
+      R('rgba(255,255,255,0.35)', sway - 1, -hgt - 3, 1, 2);
       return;
     }
     if (p.kind === 'blue') {                     // little light blue flowers in a clump
@@ -1080,9 +1107,20 @@
     R('#3f8a3a', 0, -3, 1, 3);                   // daisy
     R('#ffffff', sway - 1, -4, 3, 1); R('#ffffff', sway, -5, 1, 3); R('#f6c21a', sway, -4, 1, 1);
   }
-  function drawTree(x, g) {                      // a giant tree: thick trunk, roots, a huge crown
-    const R = (c, a, b, w, h) => { ctx.fillStyle = c; ctx.fillRect(x + a, g + b, w, h); };
-    const blob = (c, ox, oy, r) => { ctx.fillStyle = c; for (let j = -r; j <= r; j++) { const w = Math.round(Math.sqrt(r * r - j * j)); ctx.fillRect(x + ox - w, g + oy + j, 2 * w + 1, 1); } };
+  function drawTree(tr, x, g) {                  // oak (big crown) or pine (stacked triangles), S = size of its pixels
+    const S = tr.S, R = (c, a, b, w, h) => { ctx.fillStyle = c; ctx.fillRect(x + a * S, g + b * S, w * S, h * S); };
+    const blob = (c, ox, oy, r) => { ctx.fillStyle = c; for (let j = -r; j <= r; j++) { const w = Math.round(Math.sqrt(r * r - j * j)); ctx.fillRect(x + (ox - w) * S, g + (oy + j) * S, (2 * w + 1) * S, S); } };
+    if (tr.kind === 'pine') {
+      R('#5a3a1e', -3, -18, 6, 18); R('#6b4423', -2, -18, 3, 18);
+      const tiers = [[-14, 16], [-26, 13], [-37, 10], [-47, 7]];
+      for (const [y, w] of tiers) for (let j = 0; j < 14; j++) {
+        const half = Math.round(w * j / 13);
+        R(j % 4 === 3 ? '#1f4a28' : '#24572b', -half, y - 14 + j, 2 * half + 1, 1);
+        R('#2f6b34', -half, y - 14 + j, Math.max(1, half >> 1), 1);
+      }
+      R('#2f6b34', 0, -62, 1, 2);
+      return;
+    }
     R('#5a3a1e', -8, -70, 16, 70); R('#6b4423', -6, -70, 10, 70); R('#7d5230', -4, -70, 3, 70);
     for (let k = 0; k < 8; k++) R('#4a2f18', -6 + (k * 5) % 12, -66 + k * 8, 1, 4);           // bark
     R('#5a3a1e', -13, -6, 5, 6); R('#5a3a1e', 8, -5, 6, 5); R('#5a3a1e', -17, -2, 4, 2); R('#5a3a1e', 14, -2, 5, 2);   // root flare
@@ -1092,43 +1130,30 @@
     blob('#3f8a3a', -14, -90, 11); blob('#3f8a3a', 15, -92, 12); blob('#3f8a3a', 2, -104, 10);
     blob('#5aa84a', -10, -95, 4); blob('#5aa84a', 13, -99, 4); blob('#5aa84a', 0, -110, 3);
   }
-  // roots of the giant tree reach into the earth (only drawn, the worm can eat through them)
-  const ROOTS = [[-6, 0, -22, 26], [4, 0, 18, 30], [0, 0, -2, 38], [-12, 2, -40, 16], [10, 2, 42, 20]];
-  const INSECTS = Array.from({ length: 14 }, (_, i) => ({ bee: i % 3 === 0, x: hash(i, 95) * WCOLS * WC, sp: 0.3 + hash(i, 96) * 0.5,
+  const INSECTS = Array.from({ length: 16 }, (_, i) => ({ bee: i % 3 === 0, x: hash(i, 95) * WCOLS * WC, sp: 0.2 + hash(i, 96) * 0.35,
     col: ['#f0902a', '#ffffff', '#9fdcff', '#f07aa8'][i % 4], ph: hash(i, 97) * 6.3 }));
   function drawMeadow(cx, cy, t) {
     const g = -cy;
-    if (g < -40 || g > VH + 140) return;
-    // roots first, over the earth
-    ctx.fillStyle = '#4a2f18';
-    for (const [x0, y0, x1, y1] of ROOTS) {
-      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
-      for (let k = 0; k <= n; k++) {
-        const wx = TREE_X + Math.round(x0 + (x1 - x0) * k / n), wy = Math.round(y0 + (y1 - y0) * k / n + Math.sin(k / 4) * 2);
-        const c = Math.floor(wx / WC), r = Math.floor(wy / WC);
-        if (r >= 0 && W.dug[r * WCOLS + c]) continue;
-        ctx.fillRect(wx - cx, wy - cy, 2 - (k > n * 0.6 ? 1 : 0), 1);
-      }
-    }
-    if (TREE_X - cx > -80 && TREE_X - cx < VW + 80) drawTree(TREE_X - cx, g);
+    if (g < -10 || g > VH + 240) return;
+    for (const tr of TREES) { const x = tr.x - cx; if (x > -60 * tr.S && x < VW + 60 * tr.S) drawTree(tr, x, g); }
     for (const p of plants) {
       const x = p.x - cx;
-      if (x < -6 || x > VW + 6 || W.dug[Math.floor(p.x / WC)]) continue;     // eaten from below: gone
+      if (x < -12 || x > VW + 12 || W.dug[Math.floor(p.x / WC)]) continue;     // eaten from below: gone
       drawPlant(p, x, g, t);
     }
+    const P = (c, a, b, w, h) => { ctx.fillStyle = c; ctx.fillRect(a, b, w * PS, h * PS); };
     for (const b of INSECTS) {
-      const x = Math.round(b.x + Math.sin(t * b.sp + b.ph) * 60 + Math.sin(t * 1.7 + b.ph) * 6) - cx;
-      const y = g - Math.round(b.bee ? 9 + 5 * Math.sin(t * 2.4 + b.ph) : 18 + 10 * Math.sin(t * 0.8 + b.ph) + 3 * Math.sin(t * 3 + b.ph));
-      if (x < -4 || x > VW + 4) continue;
+      const x = Math.round(b.x + Math.sin(t * b.sp + b.ph) * 120 + Math.sin(t * 1.7 + b.ph) * 10) - cx;
+      const y = g - Math.round(b.bee ? 22 + 10 * Math.sin(t * 2.4 + b.ph) : 46 + 20 * Math.sin(t * 0.8 + b.ph) + 6 * Math.sin(t * 3 + b.ph));
+      if (x < -10 || x > VW + 10) continue;
       if (b.bee) {                               // bee: striped body, flickering wings
-        ctx.fillStyle = '#f6c21a'; ctx.fillRect(x, y, 3, 2); ctx.fillStyle = '#1c1c1c'; ctx.fillRect(x + 1, y, 1, 2);
-        if (Math.sin(t * 40 + b.ph) > 0) { ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 1, y - 1, 1, 1); }
+        P('#f6c21a', x, y, 3, 2); P('#1c1c1c', x + PS, y, 1, 2);
+        if (Math.sin(t * 40 + b.ph) > 0) P('#ffffff', x + PS, y - PS, 1, 1);
       } else {                                   // butterfly: wings open and close
         const open = Math.sin(t * 12 + b.ph) > 0;
-        ctx.fillStyle = b.col;
-        if (open) { ctx.fillRect(x - 2, y - 1, 2, 2); ctx.fillRect(x + 1, y - 1, 2, 2); ctx.fillRect(x - 1, y + 1, 1, 1); ctx.fillRect(x + 1, y + 1, 1, 1); }
-        else { ctx.fillRect(x - 1, y - 2, 1, 2); ctx.fillRect(x + 1, y - 2, 1, 2); }
-        ctx.fillStyle = '#1c1c1c'; ctx.fillRect(x, y - 1, 1, 3);
+        if (open) { P(b.col, x - 2 * PS, y - PS, 2, 2); P(b.col, x + PS, y - PS, 2, 2); P(b.col, x - PS, y + PS, 1, 1); P(b.col, x + PS, y + PS, 1, 1); }
+        else { P(b.col, x - PS, y - 2 * PS, 1, 2); P(b.col, x + PS, y - 2 * PS, 1, 2); }
+        P('#1c1c1c', x, y - PS, 1, 3);
       }
     }
   }
@@ -1162,6 +1187,13 @@
           ctx.fillStyle = BED[h < 0.4 ? 0 : h < 0.72 ? 1 : h < 0.92 ? 2 : 3];
           ctx.fillRect(x + (q & 1) * 2, y + (q >> 1) * 2, 2, 2);
         }
+        continue;
+      }
+      if (ROOT[r * WCOLS + c]) {                 // a tree root: hard wood
+        const h = hash(c + 700, r);
+        ctx.fillStyle = '#5a3a1e'; ctx.fillRect(x, y, WC, WC);
+        ctx.fillStyle = '#4a2f18'; ctx.fillRect(x, y + (h * 4 | 0), WC, 1);
+        ctx.fillStyle = '#7d5230'; ctx.fillRect(x + (h * 13 | 0) % 4, y + (h * 7 | 0) % 3, 1, 1);
         continue;
       }
       const band = BANDS[wBand(c, r)], h = hash(c + 300, r);

@@ -77,8 +77,10 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
   The stops lie in the earth as food with their name above (Start = apple, Odds & Ends = mushroom, About me =
   carrot, Impressum = pear); the head next to one opens its card, eating "Start" fades back to the coaster.
   The world is wide (280 cells; Jannes wanted the walls far apart, lots of room to dig).
-  The surface is a meadow (`drawMeadow`): sunflowers, tulips, light blue flowers, daisies, grass, butterflies
-  and bees, and a giant tree (`TREE_X`) with roots drawn into the earth. Plants vanish when eaten from below.
+  The surface is a meadow (`drawMeadow`), drawn big to suit the worm (meadow pixels are `PS` = 2 px):
+  sunflowers, tulips, light blue flowers, daisies, grass, butterflies and bees, and `TREES` (oaks and pines,
+  one giant oak at double size). Tree roots are solid cells (`ROOT`, `solid`): neither worm nor mole can eat
+  them. Plants vanish when eaten from below.
   Scattered finds (counter in the hint): a few fossils, old coins, things from the Middle Ages higher up
   (knight helmet, sword, crown, key, shield, horseshoe, ring, goblet) and Roman ones below (amphora, helmet,
   mosaic, oil lamp). He likes variety and historical finds.
