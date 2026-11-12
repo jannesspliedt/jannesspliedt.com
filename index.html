@@ -504,6 +504,7 @@
   let barBroken = false, barParts = [];
   // the new world below the hole: world 0 = the coaster line, world 1 = where you land after the fall
   let world = 0, wT = 0;
+  let coins = 0, bump = 0;                       // the coin counter, shared by the ride and the worm world
   let hopOn = null, spd = 0, lpx = 0, lpy = 0;
   const HUT_X = -64;
   const SPRING_X = 3, SPRING_REST = 14, SPRING_STOP = 15;
@@ -629,6 +630,7 @@
   }
 
   function arrive() {
+    for (const c of rideCoins) c.got = false;       // the coins in the air are back at every stop
     pteroDone = false; falling = false; hopOn = null; barBroken = false; barParts = [];
     riding = false; boost = false; wrapping = false; launched = false; entering = false; springing = 0; v = 0;
     idx = target; s = stS[idx];
@@ -699,6 +701,55 @@
   }
   addEventListener('hashchange', fromHash);
   fromHash();
+
+  /* ---------- coins ---------- */
+  function drawCounter() {                       // bottom middle: a gold coin and the number
+    bump = Math.max(0, bump - 1 / 60);
+    const txt = String(coins), w = 9 + textW(txt), x = (VW - w) >> 1, y = VHV - Math.round(50 / SC) - 9 - (bump > 0.15 ? 1 : 0);
+    ctx.fillStyle = '#1c1c1c'; ctx.fillRect(x - 3, y - 2, w + 6, 10);
+    ctx.fillStyle = '#e8c040'; ctx.fillRect(x + 1, y, 3, 6); ctx.fillRect(x, y + 1, 5, 4);
+    ctx.fillStyle = '#a8801c'; ctx.fillRect(x + 1, y + 5, 3, 1); ctx.fillRect(x + 4, y + 1, 1, 4);
+    ctx.fillStyle = '#fff1a0'; ctx.fillRect(x + 1, y + 1, 1, 2);
+    drawText(txt, x + 9, y + 1, '#f6d24a');
+  }
+  // coins hang in the air along the flight path of each forward jump: 1, 5, 10, 5, 1
+  const RIDE_COIN = { 1: ['#c27a3a', '#eaa468', '#81491f'], 5: ['#c4c9d2', '#ffffff', '#7f8590'], 10: ['#e8c040', '#fff1a0', '#a8801c'] };
+  const rideCoins = [];
+  for (const h of HOPS) for (const z of [[h.c - 6, h.c - 6 + h.f]]) {
+    [1, 5, 10, 5, 1].forEach((val, k) => {
+      const q = Math.round(z[0] + (z[1] - z[0]) * (0.12 + 0.19 * k));
+      const x = X[q], y = Y[q] - hop(q, z) - 10;
+      rideCoins.push({ x, y, val, got: false });
+    });
+  }
+  let ridePops = [];
+  function rideCoinsCheck(x, y) {                // the cart picks up every coin it flies through
+    for (const c of rideCoins) if (!c.got && Math.hypot(c.x - x, c.y - y) < 11) {
+      c.got = true; coins += c.val; bump = 0.3;
+      ridePops.push({ text: '+' + c.val, x: c.x, y: c.y - 8, t: 1 });
+    }
+  }
+  function drawRideCoins(cx, cy, t, dt) {
+    for (const c of rideCoins) {
+      if (c.got) continue;
+      const x = Math.round(c.x) - cx, y = Math.round(c.y) - cy;
+      if (x < -12 || x > VW + 12 || y < -12 || y > VH + 12) continue;
+      const [a, l, d] = RIDE_COIN[c.val], txt = String(c.val), w = Math.max(7, textW(txt) + 4);
+      const sq = Math.abs(Math.sin(t * 2.2 + c.x)) > 0.3 ? 0 : 1;        // a little spin now and then
+      ctx.fillStyle = '#1c1c1c'; ctx.fillRect(x - (w >> 1) + sq, y - 4, w - 2 * sq, 9);
+      ctx.fillStyle = a; ctx.fillRect(x - (w >> 1) + 1 + sq, y - 3, w - 2 - 2 * sq, 7);
+      ctx.fillStyle = l; ctx.fillRect(x - (w >> 1) + 1 + sq, y - 3, w - 2 - 2 * sq, 1);
+      ctx.fillStyle = d; ctx.fillRect(x - (w >> 1) + 1 + sq, y + 3, w - 2 - 2 * sq, 1);
+      if (!sq) drawText(txt, x - (textW(txt) >> 1), y - 2, d);
+    }
+    for (const p of ridePops) { p.t -= dt; p.y -= 12 * dt; }
+    ridePops = ridePops.filter(p => p.t > 0);
+    for (const p of ridePops) {
+      const w = textW(p.text), x = Math.round(p.x - cx - w / 2), y = Math.round(p.y - cy);
+      ctx.fillStyle = '#1c1c1c'; ctx.fillRect(x - 1, y - 1, w + 2, 7);
+      drawText(p.text, x, y, '#f6d24a');
+    }
+  }
 
   /* ---------- after the fall: a worm in the earth ---------- */
   // The world is a grid of 4 px cells. The worm eats its way through them; the stops lie in the earth as food.
@@ -778,17 +829,17 @@
   for (let k = 0, n = 0; n < 26 && k < 400; k++) {
     const c = 3 + (hash(k, 81) * (WCOLS - 6) | 0), r = 14 + (hash(k, 82) * (WROWS - 26) | 0);
     if (nearFood(c, r, 3) || FINDS.some(f => Math.abs(f.c - c) < 4 && Math.abs(f.r - r) < 4) || Math.abs(c - WSTART) < 3) continue;
-    const kind = r / WROWS + hash(k, 83) * 0.3 > 0.62 ? 'gold' : 'silver';   // deeper = more gold
+    const q = r / WROWS + hash(k, 83) * 0.3, kind = q < 0.42 ? 'bronze' : q < 0.72 ? 'silver' : 'gold';   // deeper = more precious
     FINDS.push({ kind, coin: true, name: kind.toUpperCase() + ' COIN', c, r }); n++;
   }
   for (const c of [WSTART - 4, WSTART - 1, WSTART + 2]) FINDS.push({ kind: 'gold', coin: true, name: 'GOLD COIN', c, r: WROWS - 7 });   // a little hoard at the bottom
-  // what each find is worth on the coin counter: silver 1, gold 2, Middle Ages 5, Romans 10 (fossils: nothing)
+  // what each find is worth on the coin counter: bronze 1, silver 2, gold 4, Middle Ages 5, Romans 10 (fossils: nothing)
   const MEDIEVAL = ['knight', 'sword', 'crown', 'key', 'shield', 'horseshoe', 'ring', 'goblet'], ROMAN = ['amphora', 'legion', 'mosaic', 'lamp'];
-  const worth = f => f.kind === 'silver' ? 1 : f.kind === 'gold' ? 2 : MEDIEVAL.includes(f.kind) ? 5 : ROMAN.includes(f.kind) ? 10 : 0;
+  const worth = f => f.kind === 'bronze' ? 1 : f.kind === 'silver' ? 2 : f.kind === 'gold' ? 4 : MEDIEVAL.includes(f.kind) ? 5 : ROMAN.includes(f.kind) ? 10 : 0;
   const finds = FINDS.map(f => ({ ...f, got: false, worth: worth(f) }));
 
   const W = { dug: new Uint8Array(WCOLS * WROWS), body: [], dir: [0, 1], wait: 0, keys: [], goal: null,
-    open: -1, arrow: -1, forced: false, leaving: 0, camX: 0, camY: 0, crumbs: [], pops: [], got: 0, coins: 0 };
+    open: -1, arrow: -1, forced: false, leaving: 0, camX: 0, camY: 0, crumbs: [], pops: [], got: 0 };
   for (let r = 0; r < 6; r++) W.dug[r * WCOLS + WSTART] = 1;     // the shaft you fell down
 
   // the hunter: a mole, two cells big, that digs a 2x2 hole and chases you, but more slowly
@@ -837,7 +888,7 @@
 
   function backToStart() {                       // fade in again just before the start and roll into it
     if (W.caught) {                              // caught by the mole: the earth closes again and the finds are buried again
-      W.caught = false; W.dug.fill(0); W.got = 0; W.coins = 0;
+      W.caught = false; W.dug.fill(0); W.got = 0; coins = 0;
       for (let r = 0; r < 6; r++) W.dug[r * WCOLS + WSTART] = 1;
       for (const f of finds) f.got = false;
     }
@@ -877,9 +928,9 @@
         vy: -20 - Math.random() * 30, t: 0.5, col: band.front[q] });
     }
     for (const f of finds) if (!f.got && (f.coin ? f.c === nc && f.r === nr : nc >= f.c && nc <= f.c + 1 && nr >= f.r && nr <= f.r + 1)) {
-      f.got = true; W.got++; W.coins += f.worth;
+      f.got = true; W.got++; coins += f.worth;
       W.pops.push({ text: f.name + (f.worth ? ' +' + f.worth : ''), x: nc * WC + 2, y: nr * WC - 6, t: 1.6 });
-      W.bump = 0.3;
+      bump = 0.3;
       hint.textContent = `finds ${W.got} / ${finds.length}`;
     }
     return true;
@@ -1064,17 +1115,7 @@
       ctx.fillStyle = '#1c1c1c'; ctx.fillRect(x - 1, y - 1, w + 2, 7);
       drawText(p.text, x, y, '#f6d24a');
     }
-    // the coin counter, bottom middle
-    {
-      W.bump = Math.max(0, (W.bump || 0) - 1 / 60);
-      const txt = String(W.coins), w = 9 + textW(txt), x = (VW - w) >> 1, y = VHV - Math.round(50 / SC) - 9 - (W.bump > 0.15 ? 1 : 0);
-      ctx.fillStyle = '#1c1c1c'; ctx.fillRect(x - 3, y - 2, w + 6, 10);
-      const [a, l, d] = COINS.gold;
-      ctx.fillStyle = a; ctx.fillRect(x + 1, y, 3, 6); ctx.fillRect(x, y + 1, 5, 4);
-      ctx.fillStyle = d; ctx.fillRect(x + 1, y + 5, 3, 1); ctx.fillRect(x + 4, y + 1, 1, 4);
-      ctx.fillStyle = l; ctx.fillRect(x + 1, y + 1, 1, 2);
-      drawText(txt, x + 9, y + 1, '#f6d24a');
-    }
+    drawCounter();
     if (H.flash > 0) { ctx.fillStyle = `rgba(200,20,40,${H.flash * 0.6})`; ctx.fillRect(0, 0, VW, VH); }
     // fade in after the fall, fade out when you eat "Start"
     const fade = Math.max(clamp(1 - wT / 0.8, 0, 1), clamp(W.leaving / 0.8, 0, 1));
@@ -1842,6 +1883,7 @@
     lpx = px; lpy = py - lift;
     if (inst < 2500) spd += (inst - spd) * 0.3;     // measured speed of the cart, 8 px = 1 m
     const carX = Math.round(px) - cx, carY = Math.round(py - lift) - cy;
+    if (lift > 2) rideCoinsCheck(px, py - lift - 10);
     ctx.save();
     ctx.translate(carX, carY);
     ctx.rotate(ang - (lift ? 0.25 * Math.sin((s - hopOn[0]) / (hopOn[1] - hopOn[0]) * Math.PI) * (fwd ? 1 : -1) : 0));
@@ -1878,9 +1920,11 @@
       drawText(txt, bxx + 3, byy + 2, '#b23a48');
     }
 
+    drawRideCoins(cx, cy, t, dt);
     // night tint
     if (p > 0.4) { ctx.fillStyle = `rgba(10,12,48,${clamp((p - 0.4) * 0.13, 0, 0.34)})`; ctx.fillRect(0, 0, VW, VH); }
 
+    if (coins > 0) drawCounter();
     // fade between the end of the line and the start
     const fade = falling ? clamp((fallT - 9.4) / 0.7, 0, 1) : (entering ? clamp(1 - (s - ENTER_S) / 45, 0, 1) : 0);
     if (fade > 0) { ctx.fillStyle = `rgba(0,0,0,${fade})`; ctx.fillRect(0, 0, VW, VH); }

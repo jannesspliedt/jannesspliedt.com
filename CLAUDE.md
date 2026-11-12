@@ -79,7 +79,8 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
   Scattered finds (counter in the hint): a few fossils, old coins, things from the Middle Ages higher up
   (knight helmet, sword, crown, key, shield, horseshoe, ring, goblet) and Roman ones below (amphora, helmet,
   mosaic, oil lamp). He likes variety and historical finds.
-  Coin counter (bottom middle): silver coin 1, gold coin 2, medieval find 5, Roman find 10, fossils 0 (`worth`).
+  Coin counter (bottom middle, `coins`, shared with the ride): bronze 1, silver 2, gold 4, medieval find 5,
+  Roman find 10, fossils 0 (`worth`).
   A hunter mole (`H`, dark fur, pink snout and paws, mouth open, two cells big, digs a 2x2 hole) chases your head, slower than you
   (0.17 s per cell in earth vs. your 0.1 s). If it catches you: "CAUGHT!", red flash, fade, and you are
   sent all the way back to the coaster Start; the tunnels and finds are reset. It waits 5 s after you land. At the bottom is unbreakable bedrock
@@ -88,6 +89,9 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
   screen edge while it is off-screen, above the food once it is visible) until it is eaten. Exception for
   the law: the Impressum button also opens the Impressum card at once; it closes when the worm digs on.
 - Speed label above the cart shows the measured speed (8 px = 1 m).
+- Ride coins (`rideCoins`): along the flight path of each forward jump hang coins worth 1, 5, 10, 5, 1
+  (bronze/silver/gold with the number, own design; Jannes wanted it like coin trails in Hill Climb Racing).
+  The cart collects them in the air; they come back at every stop (`arrive`). Counter shows once coins > 0.
 
 ## How the script is organised (inside `index.html`)
 
