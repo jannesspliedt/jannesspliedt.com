@@ -1,0 +1,95 @@
+# jannesspliedt.com
+
+Personal website of Jannes Spliedt. The whole site is a 2D pixel-art roller coaster: a cart rides
+from stop to stop, and each stop opens a white panel with content. Jannes usually writes in German;
+the site content is in English, the Impressum is in German.
+
+## Files
+
+- `index.html` – everything: markup, CSS and one inline script (no build step, no dependencies).
+- `posts.js` – the blog posts for the "Odds & Ends" stop, as plain text inside one template string.
+
+## Deploying
+
+Cloudflare (Workers Builds, project `jannesspliedt-com`) is connected to this repository.
+Every push to `main` goes live at https://jannesspliedt.com within a minute or two.
+There is nothing to build: the repository root is served as is.
+
+## Hard rules
+
+- **No external requests.** No web fonts, CDNs, analytics or embeds. The Datenschutzerklärung in the
+  Impressum states that the page loads nothing external and sets no cookies. If that ever changes,
+  the Datenschutzerklärung must be updated in the same commit.
+- **Impressum stays reachable from everywhere** (nav button, `#impressum`, `#datenschutz`). It is a
+  legal requirement in Germany. Name, address and e-mail in it were given by Jannes; do not change
+  them unless he asks.
+- **No phone number, home address in Aachen/Singapore or matriculation number** on the site.
+- **Original artwork only.** Jannes asked for a Balrog, the hut from Shrek and Minecraft diamond ore;
+  these were deliberately replaced by original designs (shadow creature with lantern eyes, mossy
+  cottage, own gem-in-rock cells). Keep it that way; do not draw existing characters or game assets.
+- **System fonts only**, white panels with black borders (he explicitly did not want cream/yellow).
+- Keep the `no-js` fallback working: without JavaScript all panels are shown stacked.
+- Respect `prefers-reduced-motion`: rides are skipped and the cart jumps to the stop.
+
+## Stops (in order)
+
+| Stop | id | Content |
+|---|---|---|
+| Start | `start` | Only the line "Press → to ride to the next stop and ← to go back." |
+| Odds & Ends | `odds-and-ends` | Blog. List of posts, click opens one. Empty for now. |
+| About me | `about` | Only Education, Work Experience, Highlights, Languages – no prose, no contact block. Institution in bold, degree/role in the small line. Taken from his CV. |
+| Impressum | `impressum` | Impressum and Datenschutzerklärung (German). |
+
+Deep links: `#about`, `#impressum`, `#odds-and-ends/<post-slug>`.
+
+## Blog posts (`posts.js`)
+
+Posts are plain text between the backticks of `window.POSTS_TEXT`. Format:
+
+```
+=== Title of the post
+date: 2026-11-12
+
+Paragraph text. An empty line starts a new paragraph.
+
+1. numbered list
+- bullet list
+## small heading
+**bold**, *italic*, [link](https://…), ![picture](file.jpg)
+```
+
+Posts are sorted by date, newest first. No backticks inside the text. Images are files in the
+repository root. The parser and renderer live in the "blog (Odds & Ends)" section of the script.
+
+## Controls
+
+- `→` / `d` / Space / Enter: ride to the next stop. `←` / `a`: ride back. Buttons ◀ ▶ and the nav for touch.
+- Pressing the same direction again while riding = speed up. Only then the cart takes off at one
+  hill crest per leg (`HOPS`), forwards and backwards.
+- At Start, `←` rolls the cart back (about 3 s, can be sped up) into a spring that fires it to Odds & Ends.
+- At the Impressum, `→` starts the finale: slow roll with gentle acceleration through a barrier with
+  warning signs and the Karman-Tor (side view; cart passes in front of the first jamb, behind the
+  second; rails in front of the first jamb), the rails end, the cart free-falls about 10 s into the
+  hole with a scream bubble and an 8-bit scream (toggle "♪ on/off"), fade, back to Start.
+- Speed label above the cart shows the measured speed (8 px = 1 m).
+
+## How the script is organised (inside `index.html`)
+
+- **Track**: built from `flat`, `ramp`, `loop`, `station`, then resampled to 1 px arc length
+  (`X`, `Y`, `TX`, `TY`, index = distance `s`). `stS` = stop positions.
+- **Rendering**: low-resolution canvas scaled up by an integer (`SC`), `image-rendering: pixelated`.
+  `VH` is the drawn height, `VHV` the visible height used for layout (phones draw past the bottom).
+- **Sky** changes with progress: day → sunset → dusk → night. At night a satellite train crosses.
+- **Background** (parallax 0.3, on the green hills): dinosaurs grazing (`drawDiplo`, `drawTrike`,
+  `drawStego`, spread along the line via `DINO_W`) and the cottage behind the spring. A pterosaur
+  flies past on the last leg (world-space, own speed).
+- **Ground**: 4 px cells; `BANDS` are the rock layers. `wallL`/`wallR` define the hole.
+- **Cave** (`drawCave`): burrow tunnels near the top, mine with dwarves (`drawMine`, 7 floors),
+  crystals, gems in the deep stone, creatures (`drawCritters`, `drawLurker`, `drawBeast`).
+- **State**: `idx`/`target`, `riding`, `boost`, `springing`, `launched`, `wrapping`, `falling`.
+
+## Working on it
+
+- After changes, run the page in a headless browser and ride every leg in both directions plus the
+  finale; check a phone-sized viewport too. Watch for console errors: one exception stops the animation.
+- Jannes reviews visually and gives short, specific change requests; make the change, test, push.
