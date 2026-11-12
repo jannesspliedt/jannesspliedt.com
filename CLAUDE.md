@@ -70,7 +70,14 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
 - At the Impressum, `→` starts the finale: slow roll with gentle acceleration through a barrier with
   warning signs and the Karman-Tor (side view; cart passes in front of the first jamb, behind the
   second; rails in front of the first jamb), the rails end, the cart free-falls about 10 s into the
-  hole with a scream bubble and an 8-bit scream (toggle "♪ on/off"), fade, back to Start.
+  hole with a scream bubble and an 8-bit scream (toggle "♪ on/off"), fade, and you land in the worm world.
+- **Worm world** (after the fall): you are a worm in the earth and eat your way through it with arrow keys /
+  WASD (tap or click = dig towards that spot, ◀ ▶ = a few cells sideways). Turning back makes the tail the head.
+  The stops lie in the earth as food with their name above (Start = apple, Odds & Ends = mushroom, About me =
+  carrot, Impressum = pear); the head next to one opens its card, eating "Start" fades back to the coaster.
+  Scattered finds: a few fossils and old coins (counter in the hint). At the bottom is unbreakable bedrock
+  (own speckled texture; Jannes asked for Minecraft bedrock, keep it an original design). The nav buttons
+  lead out of the worm world to that stop.
 - Speed label above the cart shows the measured speed (8 px = 1 m).
 
 ## How the script is organised (inside `index.html`)
@@ -86,7 +93,11 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
 - **Ground**: 4 px cells; `BANDS` are the rock layers. `wallL`/`wallR` define the hole.
 - **Cave** (`drawCave`): burrow tunnels near the top, mine with dwarves (`drawMine`, 7 floors),
   crystals, gems in the deep stone, creatures (`drawCritters`, `drawLurker`, `drawBeast`).
-- **State**: `idx`/`target`, `riding`, `boost`, `springing`, `launched`, `wrapping`, `falling`.
+- **Worm world**: section "after the fall: a worm in the earth". Grid of 4 px cells (`WC`, `WCOLS`, `WROWS`),
+  `W` holds tunnels (`dug`), worm `body` (head first), keys, tap `goal`, open card. `FOODS` = stops, `FINDS` =
+  fossils and coins, `isBed` = bedrock. `world` = 0 (coaster) or 1 (worm); `update`, `draw` and the keys
+  branch on it (`updateWorld`, `drawWorld`, `wormKey`, `tapWorld`).
+- **State**: `idx`/`target`, `riding`, `boost`, `springing`, `launched`, `wrapping`, `falling`, `world`.
 
 ## Working on it
 
