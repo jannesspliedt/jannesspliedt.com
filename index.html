@@ -2,11 +2,14 @@
 <html lang="en" class="no-js">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="only light">
+<meta name="theme-color" content="#3f9be6">
 <title>Jannes Spliedt</title>
 <meta name="description" content="Jannes Spliedt – take the roller coaster through my personal website. Use the arrow keys to ride.">
 <style>
   :root {
+    color-scheme: only light;          /* stop phones in dark mode from re-colouring the white panels */
     --paper: #ffffff;
     --paper-dark: #ededed;
     --ink: #1c1c1c;
@@ -19,8 +22,9 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
+  html { background: linear-gradient(#3f9be6 50%, #6f7480 50%); }   /* if a phone leaves a strip uncovered it is sky above, rock below */
   body {
-    background: #4aa3e8;
+    background: transparent;
     color: var(--ink);
     font-family: var(--sans);
     font-size: 16px;
@@ -42,26 +46,28 @@
     box-shadow: 3px 3px 0 rgba(0,0,0,.35);
     cursor: pointer;
   }
-  .px:hover, .px:focus-visible { background: #ececec; outline: none; }
+  .px { -webkit-appearance: none; appearance: none; border-radius: 0; -webkit-tap-highlight-color: transparent; }
+  .px:focus-visible { background: #ececec; outline: none; }
+  @media (hover: hover) { .px:hover { background: #ececec; } }   /* no sticky grey after a tap on touch screens */
   .px:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0,0,0,.35); }
 
   nav#stops {
-    position: fixed; top: 12px; left: 0; right: 0; z-index: 5;
+    position: fixed; top: calc(12px + env(safe-area-inset-top, 0px)); left: 0; right: 0; z-index: 5;
     display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; padding: 0 12px;
   }
   nav#stops button { font-size: 13px; padding: 5px 10px; }
   nav#stops button[aria-current="true"] { background: var(--accent); color: #fff; }
 
   .arrow {
-    position: fixed; bottom: 16px; z-index: 5;
+    position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 5;
     width: 56px; height: 56px; font-size: 24px; line-height: 1;
   }
-  #prev { left: 16px; }
-  #snd { position: fixed; z-index: 5; left: 84px; bottom: 16px; font-size: 12px; padding: 4px 8px; }
-  #next { right: 16px; }
+  #prev { left: calc(16px + env(safe-area-inset-left, 0px)); }
+  #snd { position: fixed; z-index: 5; left: calc(84px + env(safe-area-inset-left, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); font-size: 12px; padding: 4px 8px; }
+  #next { right: calc(16px + env(safe-area-inset-right, 0px)); }
   .arrow[disabled] { opacity: .35; cursor: default; }
   #hint {
-    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%); z-index: 5;
+    position: fixed; bottom: calc(26px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%); z-index: 5;
     font-family: var(--mono); font-weight: 700; font-size: 13px; letter-spacing: .06em; text-transform: uppercase;
     color: #fff; text-shadow: 2px 2px 0 rgba(0,0,0,.6);
     white-space: nowrap; pointer-events: none;
@@ -70,19 +76,20 @@
   /* ---------- Cards ---------- */
   .card {
     position: fixed; z-index: 4;
-    left: 50%; top: 64px; transform: translateX(-50%);
+    left: 50%; top: calc(64px + env(safe-area-inset-top, 0px)); transform: translateX(-50%);
     width: min(640px, calc(100vw - 32px));
     max-height: calc(76vh - 64px - var(--sc, 4) * 24px);
     max-height: calc(76dvh - 64px - var(--sc, 4) * 24px);
     overflow-y: auto;
-    background: var(--paper);
+    background: #ffffff;
+    forced-color-adjust: none;
     border: 4px solid var(--wood);
     box-shadow: inset 0 0 0 4px var(--trim), 6px 6px 0 rgba(0,0,0,.35);
     padding: 26px 30px 28px;
     display: none;
   }
-  .card.on { display: block; animation: pop .18s steps(3) both; }
-  @keyframes pop { from { transform: translateX(-50%) translateY(10px); opacity: 0; } to { transform: translateX(-50%); opacity: 1; } }
+  .card.on { display: block; animation: pop .18s steps(3); }
+  @keyframes pop { from { transform: translateX(-50%) translateY(10px); } to { transform: translateX(-50%); } }
   @media (prefers-reduced-motion: reduce) { .card.on { animation: none; } }
 
   .stopno {
@@ -128,7 +135,8 @@
     display: grid; grid-template-columns: 110px 1fr; gap: 14px; width: 100%; text-align: left;
     padding: 12px 6px; background: none; border: 0; color: inherit; font: inherit; cursor: pointer;
   }
-  .postlink:hover, .postlink:focus-visible { background: var(--paper-dark); outline: none; }
+  .postlink:focus-visible { background: var(--paper-dark); outline: none; }
+  @media (hover: hover) { .postlink:hover { background: var(--paper-dark); } }
   .postlink time, .post time { font-family: var(--mono); font-weight: 700; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); padding-top: 3px; }
   .postlink span { font-weight: 600; }
   .back { font-size: 12px; padding: 4px 10px; margin: 6px 0 14px; }
@@ -143,14 +151,15 @@
   details summary { cursor: pointer; font-family: var(--mono); font-weight: 700; text-transform: uppercase; font-size: 15px; letter-spacing: .08em; margin: 24px 0 10px; padding-top: 16px; border-top: 3px dashed var(--trim); }
 
   @media (max-width: 560px) {
-    .card { padding: 20px 20px 22px; top: 92px; max-height: calc(76dvh - 92px - var(--sc, 3) * 24px); }
+    .card { padding: 20px 20px 22px; top: calc(92px + env(safe-area-inset-top, 0px)); max-height: calc(76dvh - 92px - env(safe-area-inset-top, 0px) - var(--sc, 3) * 24px); }
     .rows li { grid-template-columns: 1fr; gap: 0; }
     #hint { display: none; }
     nav#stops button { font-size: 12px; padding: 4px 7px; }
   }
 
   /* ---------- Fallback without JavaScript ---------- */
-  .no-js body { overflow: auto; background: #cfe9f8; padding: 16px; }
+  html.no-js, .no-js body { background: #cfe9f8; }
+  .no-js body { overflow: auto; padding: 16px; }
   .no-js canvas#c, .no-js nav#stops, .no-js .arrow, .no-js #hint, .no-js #snd { display: none; }
   .no-js .card { display: block; position: static; transform: none; margin: 0 auto 20px; max-height: none; }
 </style>
@@ -306,9 +315,12 @@
   /* ---------- screen ---------- */
   let VW = 320, VH = 200, SC = 4;
   function resize() {
-    SC = Math.max(2, Math.round(Math.min(innerHeight / 200, innerWidth / 150)));
-    VW = Math.ceil(innerWidth / SC);
-    VH = Math.ceil(innerHeight / SC);
+    // phones change the visible height when their toolbars slide in and out: always take the largest real size
+    const W = Math.max(innerWidth, document.documentElement.clientWidth || 0);
+    const H = Math.max(innerHeight, document.documentElement.clientHeight || 0);
+    SC = Math.max(2, Math.round(Math.min(H / 200, W / 150)));
+    VW = Math.ceil(W / SC);
+    VH = Math.ceil(H / SC);
     cv.width = VW; cv.height = VH;
     cv.style.width = VW * SC + 'px';
     cv.style.height = VH * SC + 'px';
@@ -316,6 +328,8 @@
     document.documentElement.style.setProperty('--sc', SC);
   }
   addEventListener('resize', resize);
+  addEventListener('orientationchange', () => setTimeout(resize, 200));
+  if (window.visualViewport) visualViewport.addEventListener('resize', resize);
   resize();
 
   /* ---------- build the track ---------- */
