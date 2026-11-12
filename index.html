@@ -502,6 +502,9 @@
   let springing = 0, springT = 0, launched = false, entering = false, fwd = true;   // spring at the start of the line
   let falling = false, fx = 0, fy = 0, fvx = 0, fvy = 0, fang = 0, fallT = 0;   // free fall into the hole
   let barBroken = false, barParts = [];
+  // the new world below the hole: world 0 = the coaster line, world 1 = where you land after the fall
+  const NEW_WORLD = /[?&]neuewelt\b/.test(location.search);   // preview only until the new world is built
+  let world = 0, wT = 0;
   let hopOn = null, spd = 0, lpx = 0, lpy = 0;
   const HUT_X = -64;
   const SPRING_X = 3, SPRING_REST = 14, SPRING_STOP = 15;
@@ -606,7 +609,10 @@
   const navBtns = labels.map((l, i) => {
     const b = document.createElement('button');
     b.className = 'px'; b.textContent = l; b.type = 'button';
-    b.addEventListener('click', () => { if (!wrapping && !springing && !launched) goTo(i); });
+    b.addEventListener('click', () => {
+      if (world === 1) { world = 0; target = i; arrive(); camInit = false; return; }   // the nav leads out of the new world
+      if (!wrapping && !springing && !launched) goTo(i);
+    });
     nav.appendChild(b);
     return b;
   });
@@ -651,6 +657,7 @@
   });
   function step(d) {
     audio();                                        // browsers only allow sound after a key press or click
+    if (world === 1) { stepWorld(d); return; }
     if (springing === 1 && d < 0) { boost = true; return; }       // hurry towards the spring
     if (springing || launched) return;
     if (wrapping) { boost = true; return; }
@@ -687,14 +694,35 @@
     const [h, slug] = location.hash.split('/');
     const i = cards.findIndex(c => '#' + c.id === h || (h === '#datenschutz' && c.id === 'impressum'));
     if (h === '#odds-and-ends' && slug) openPost(decodeURIComponent(slug));
-    if (i > 0) { idx = target = i; s = stS[i]; riding = false; camInit = false; }
+    if (i > 0) { world = 0; idx = target = i; s = stS[i]; riding = false; camInit = false; }
     showCard(idx);
   }
   addEventListener('hashchange', fromHash);
   fromHash();
 
+  /* ---------- after the fall ---------- */
+  function backToStart() {                       // fade in again just before the start and roll into it
+    world = 0; falling = false; wrapping = false; s = ENTER_S; entering = true; camInit = false; v = 150; tRide = 1;
+    riding = true; target = 0;
+  }
+  function enterWorld() {                        // land in the new world
+    screamOff();
+    world = 1; wT = 0; falling = false; wrapping = false; riding = false; v = 0;
+    hint.textContent = '';
+  }
+  function updateWorld(dt) { wT += dt; }
+  function stepWorld(d) { backToStart(); }       // placeholder: any key takes you back to the start
+  function drawWorld(t) {                        // placeholder until the new world is described
+    ctx.fillStyle = '#05060f'; ctx.fillRect(0, 0, VW, VH);
+    const txt = 'NEUE WELT', w = textW(txt);
+    drawText(txt, (VW - w) >> 1, (VHV >> 1) - 4, '#ffffff');
+    const fade = clamp(1 - wT / 0.8, 0, 1);
+    if (fade > 0) { ctx.fillStyle = `rgba(0,0,0,${fade})`; ctx.fillRect(0, 0, VW, VH); }
+  }
+
   /* ---------- simulation ---------- */
   function update(dt) {
+    if (world === 1) { updateWorld(dt); return; }
     for (const q of barParts) { q.vy += 320 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.a += q.va * dt; }
     if (!riding) return;
     tRide += dt;
@@ -719,7 +747,7 @@
       fvx *= Math.exp(-1.8 * dt);
       fx += fvx * dt; fy += fvy * dt; fang += 2.4 * dt;
       v = Math.hypot(fvx, fvy);
-      if (fallT > 10.2) { falling = false; wrapping = false; s = ENTER_S; entering = true; camInit = false; v = 150; tRide = 1; }
+      if (fallT > 10.2) { if (NEW_WORLD) enterWorld(); else backToStart(); }
       return;
     }
     if (wrapping) {                                // through the gate, then the rails run out
@@ -1263,6 +1291,7 @@
   }
 
   function draw(t, dt) {
+    if (world === 1) { drawWorld(t); return; }
     const i = clamp(Math.round(s), 0, L);
     const px = falling ? fx : X[i], py = falling ? fy : Y[i];
 
