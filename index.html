@@ -817,7 +817,7 @@
     if (W.forced) { W.forced = false; showCard(W.open); }   // a card opened from the nav closes once you dig on
     b.unshift([nc, nr]); b.pop();
     W.dir = [dc, dr];
-    W.wait += fresh ? 0.15 : 0.075;               // eating earth is slower than crawling through a tunnel
+    W.wait += fresh ? 0.1 : 0.06;                 // eating earth is slower than crawling through a tunnel
     if (fresh) {
       const band = BANDS[wBand(nc, nr)];
       for (let q = 0; q < 3; q++) W.crumbs.push({ x: nc * WC + 2, y: nr * WC + 2, vx: (Math.random() - 0.5) * 40 - dc * 20,
