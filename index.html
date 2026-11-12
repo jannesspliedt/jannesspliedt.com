@@ -609,7 +609,7 @@
     const b = document.createElement('button');
     b.className = 'px'; b.textContent = l; b.type = 'button';
     b.addEventListener('click', () => {
-      if (world === 1) { world = 0; target = i; arrive(); camInit = false; return; }   // the nav leads out of the new world
+      if (world === 1) { navWorld(i); return; }   // in the worm world the nav points the way to the food
       if (!wrapping && !springing && !launched) goTo(i);
     });
     nav.appendChild(b);
@@ -785,7 +785,7 @@
   const finds = FINDS.map(f => ({ ...f, got: false }));
 
   const W = { dug: new Uint8Array(WCOLS * WROWS), body: [], dir: [0, 1], wait: 0, keys: [], goal: null,
-    open: -1, leaving: 0, camX: 0, camY: 0, crumbs: [], pops: [], got: 0 };
+    open: -1, arrow: -1, forced: false, leaving: 0, camX: 0, camY: 0, crumbs: [], pops: [], got: 0 };
   for (let r = 0; r < 6; r++) W.dug[r * WCOLS + WSTART] = 1;     // the shaft you fell down
 
   function backToStart() {                       // fade in again just before the start and roll into it
@@ -797,7 +797,7 @@
     screamOff();
     world = 1; wT = 0; falling = false; wrapping = false; riding = false; boost = false; v = 0;
     W.body = []; for (let r = 5; r >= -2; r--) W.body.push([WSTART, r]);
-    W.dir = [0, 1]; W.wait = 0.4; W.keys = []; W.goal = null; W.open = -1; W.leaving = 0; W.crumbs = []; W.pops = [];
+    W.dir = [0, 1]; W.wait = 0.4; W.keys = []; W.goal = null; W.open = -1; W.arrow = -1; W.forced = false; W.leaving = 0; W.crumbs = []; W.pops = [];
     W.camX = WSTART * WC - VW / 2; W.camY = -VHV * 0.4;
     showCard(-1);
     hint.textContent = matchMedia('(pointer: coarse)').matches ? 'tap where to dig' : 'arrow keys or wasd to dig';
@@ -814,6 +814,7 @@
     if (blocked(nc, nr)) return false;
     const k = nr * WCOLS + nc, fresh = !W.dug[k];
     W.dug[k] = 1;
+    if (W.forced) { W.forced = false; showCard(W.open); }   // a card opened from the nav closes once you dig on
     b.unshift([nc, nr]); b.pop();
     W.dir = [dc, dr];
     W.wait += fresh ? 0.15 : 0.075;               // eating earth is slower than crawling through a tunnel
@@ -852,9 +853,27 @@
     const f = FOODS.find(f => hc >= f.c - 2 && hc <= f.c + 3 && hr >= f.r - 2 && hr <= f.r + 3);
     const open = f ? f.i : -1;
     if (open !== W.open) {
-      W.open = open;
+      W.open = open; W.forced = false;
+      if (open === W.arrow) W.arrow = -1;          // found it: the arrow is no longer needed
       if (open === 0) { W.leaving = 0.001; showCard(-1); }
       else showCard(open);
+    }
+  }
+  function navWorld(i) {                         // a nav button in the worm world: an arrow shows the way to that food
+    W.arrow = i === W.open ? -1 : i;
+    // the Impressum must stay reachable with one click (German law), so its card also opens right away
+    if (i === N - 1 && W.open !== i) { showCard(i); W.forced = true; }
+  }
+  function drawArrow(x, y, ang) {                // pixel arrow pointing in direction ang, tip at (x, y)
+    ang = Math.round(ang / (Math.PI / 4)) * (Math.PI / 4);      // eight directions keep the pixels clean
+    const ca = Math.cos(ang), sa = Math.sin(ang);
+    const inside = (u, w, g) => (u >= -15 - g && u <= -6 && Math.abs(w) <= 1.6 + g) || (u >= -7 - g && u <= g && Math.abs(w) <= -u + 0.5 + g);
+    for (let pass = 0; pass < 2; pass++) {
+      ctx.fillStyle = pass ? '#f6d24a' : '#1c1c1c';
+      for (let j = -17; j <= 17; j++) for (let k = -17; k <= 17; k++) {
+        const u = (k + 0.5) * ca + (j + 0.5) * sa, w = -(k + 0.5) * sa + (j + 0.5) * ca;
+        if (inside(u, w, pass ? 0 : 1)) ctx.fillRect(x + k, y + j, 1, 1);
+      }
     }
   }
   function wormKey(e, down) {
@@ -940,6 +959,19 @@
       ctx.fillStyle = '#ffffff'; ctx.fillRect(lx, ly, w, 7);
       ctx.fillRect(x + 3, ly + 7, 2, 1);
       drawText(label, lx + 3, ly + 1, '#1c1c1c');
+    }
+    // the arrow from the nav, pointing to the food you have to eat
+    if (W.arrow >= 0 && !W.leaving) {
+      const f = FOODS.find(f => f.i === W.arrow), fx = f.c * WC + 4 - cx, fy = f.r * WC + 4 - cy;
+      const top = 18, bot = VHV - 22, m = 12;
+      if (fx > m && fx < VW - m && fy - 36 > top && fy < bot) drawArrow(Math.round(fx) - 1, Math.round(fy - 17 - Math.abs(Math.sin(t * 5)) * 3), Math.PI / 2);
+      else {
+        const hx = W.body[0][0] * WC + 2 - cx, hy = W.body[0][1] * WC + 2 - cy, ang = Math.atan2(fy - hy, fx - hx);
+        const dx = Math.cos(ang), dy = Math.sin(ang);
+        const k = Math.min(dx > 0 ? (VW - m - hx) / dx : dx < 0 ? (m - hx) / dx : 1e9, dy > 0 ? (bot - hy) / dy : dy < 0 ? (top - hy) / dy : 1e9);
+        const pulse = Math.abs(Math.sin(t * 5)) * 3;
+        drawArrow(Math.round(hx + dx * (k - pulse)), Math.round(hy + dy * (k - pulse)), ang);
+      }
     }
     // the worm
     const b = W.body;

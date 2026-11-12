@@ -79,8 +79,10 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
   Scattered finds (counter in the hint): a few fossils, old coins, things from the Middle Ages higher up
   (knight helmet, sword, crown, key, shield, horseshoe, ring, goblet) and Roman ones below (amphora, helmet,
   mosaic, oil lamp). He likes variety and historical finds. At the bottom is unbreakable bedrock
-  (own speckled texture; Jannes asked for Minecraft bedrock, keep it an original design). The nav buttons
-  lead out of the worm world to that stop.
+  (own speckled texture; Jannes asked for Minecraft bedrock, keep it an original design). In the worm
+  world the nav buttons do not leave it: a yellow arrow appears and points to that stop's food (at the
+  screen edge while it is off-screen, above the food once it is visible) until it is eaten. Exception for
+  the law: the Impressum button also opens the Impressum card at once; it closes when the worm digs on.
 - Speed label above the cart shows the measured speed (8 px = 1 m).
 
 ## How the script is organised (inside `index.html`)
