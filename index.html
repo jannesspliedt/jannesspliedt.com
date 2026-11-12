@@ -702,8 +702,11 @@
 
   /* ---------- after the fall: a worm in the earth ---------- */
   // The world is a grid of 4 px cells. The worm eats its way through them; the stops lie in the earth as food.
-  const WC = 4, WCOLS = 112, WROWS = 150, WSTART = 56;
-  const isBed = (c, r) => c < 0 || c >= WCOLS || r >= WROWS - 3 - (hash(c, 71) < 0.5 ? 1 : 0) - (hash(c, 72) < 0.3 ? 1 : 0);
+  const WC = 4, WCOLS = 280, WROWS = 150, WSTART = WCOLS >> 1;
+  const WSX = WCOLS / 112;                       // the things below were laid out on 112 columns and are spread over the full width
+  const WALL = 3;                                // how many cells of the side walls are shown
+  const wJag = (r, k) => (hash(r, k) < 0.5 ? 1 : 0) + (hash(r, k + 1) < 0.3 ? 1 : 0);      // ragged inner edge of the walls
+  const isBed = (c, r) => c < wJag(r, 74) || c >= WCOLS - wJag(r, 76) || r >= WROWS - 3 - (hash(c, 71) < 0.5 ? 1 : 0) - (hash(c, 72) < 0.3 ? 1 : 0);
   const wBand = (c, r) => {
     if (r < 10 + (hash(c, 73) < 0.5 ? 1 : 0)) return 0;
     const d = (r - 10) * 27 + 22 * Math.sin(c / 7) + 9 * Math.sin(c / 2.7);
@@ -721,10 +724,25 @@
     ammonite:  ['..bbbb..', '.b....b.', 'b..bb..b', 'b.b..b.b', 'b.b.bb.b', 'b..b...b', '.b....b.', '..bbbb..'],
     trilobite: ['..bbbb..', '.bsbbsb.', '..bbbb..', '.bbbbbb.', '..bsbb..', '.bbbbbb.', '..bbbb..', '...bb...'],
     fish:      ['........', '..b.b.b.', 'b.b.b.b.', 'bbbbbbbs', 'b.b.b.b.', '..b.b.b.', '........', '........'],
-    bone:      ['........', 'bb....bb', 'bbbbbbbb', '.bbbbbb.', 'bbbbbbbb', 'bb....bb', '........', '........']
+    bone:      ['........', 'bb....bb', 'bbbbbbbb', '.bbbbbb.', 'bbbbbbbb', 'bb....bb', '........', '........'],
+    // Middle Ages
+    knight:    ['..mmmm..', '.mmmmmm.', '.mmmmmm.', '.MkkkkM.', '.mmmmmm.', '.mmMmmm.', '.mmMmmm.', '..mmmm..'],
+    sword:     ['...m....', '...m....', '...m....', '...m....', '...m....', '.ddddd..', '...k....', '...d....'],
+    crown:     ['........', 'd..d..d.', 'd.ddd.d.', 'ddddddd.', 'dudrdud.', 'ddddddd.', '........', '........'],
+    key:       ['.dd.....', 'd..d....', 'd..d....', '.dd.....', '..d.....', '..d.....', '..dd....', '..dd....'],
+    shield:    ['mmmmmmmm', 'mrrmmuum', 'mrrmmuum', 'mmmmmmmm', 'muummrrm', '.mummrm.', '..mmmm..', '...mm...'],
+    horseshoe: ['..MMMM..', '.MM..MM.', 'MM....MM', 'MM....MM', 'MM....MM', 'MM....MM', '.M....M.', '........'],
+    ring:      ['...uu...', '..dddd..', '.d....d.', '.d....d.', '.d....d.', '..dddd..', '........', '........'],
+    goblet:    ['.dddddd.', '.dDdddd.', '..dddd..', '...dd...', '...dd...', '...dd...', '..dDDd..', '........'],
+    // Romans
+    amphora:   ['..tttt..', '...tt...', '.t.tt.t.', '.tttttt.', '.tttTtt.', '..ttTt..', '..tttt..', '...tt...'],
+    legion:    ['.rrrrrr.', '..rrrr..', '..dddd..', '.dddddd.', '.dddddd.', '.dD..Dd.', '.dD..Dd.', '........'],
+    mosaic:    ['........', '.cucucu.', '.ucrcuc.', '.crcrcr.', '.ucrcuc.', '.cucucu.', '........', '........'],
+    lamp:      ['........', '.......w', '......y.', '..tttt.t', '.tttttt.', 'tttTtttt', '.tttttt.', '..tttt..']
   };
   const PAL = { g: '#3f8a3a', G: '#6cc35a', r: '#d8443c', R: '#a12e2a', w: '#ffffff', c: '#efe3c8', C: '#c9b894',
-    o: '#ee8a2a', O: '#c46518', y: '#c9d65a', Y: '#98a63c', b: '#e9dfc4', s: '#a8987a' };
+    o: '#ee8a2a', O: '#c46518', y: '#c9d65a', Y: '#98a63c', b: '#e9dfc4', s: '#a8987a',
+    m: '#c4c9d2', M: '#7f8590', k: '#3a2a1e', d: '#e8c040', D: '#a8801c', u: '#3f6fd0', t: '#c8693a', T: '#8f4424' };
   const COINS = { gold: ['#e8c040', '#fff1a0', '#a8801c'], silver: ['#c4c9d2', '#ffffff', '#7f8590'], bronze: ['#c27a3a', '#eaa468', '#81491f'] };
   function drawSpr(name, x, y, bite) {
     const rows = SPR[name];
@@ -746,15 +764,24 @@
   // finds: a few fossils and a good number of old coins for the museum
   const FINDS = [
     { kind: 'ammonite', name: 'AMMONITE', c: 12, r: 74 }, { kind: 'trilobite', name: 'TRILOBITE', c: 96, r: 100 },
-    { kind: 'fish', name: 'FISH FOSSIL', c: 58, r: 128 }, { kind: 'bone', name: 'BONE', c: 70, r: 34 }
+    { kind: 'fish', name: 'FISH FOSSIL', c: 58, r: 128 }, { kind: 'bone', name: 'BONE', c: 70, r: 34 },
+    // things from the Middle Ages lie higher up ...
+    { kind: 'horseshoe', name: 'HORSESHOE', c: 16, r: 20 }, { kind: 'ring', name: 'GOLD RING', c: 68, r: 17 },
+    { kind: 'knight', name: 'KNIGHT HELMET', c: 40, r: 26 }, { kind: 'goblet', name: 'GOBLET', c: 104, r: 34 },
+    { kind: 'shield', name: 'SHIELD', c: 50, r: 42 }, { kind: 'sword', name: 'SWORD', c: 98, r: 50 },
+    { kind: 'crown', name: 'CROWN', c: 8, r: 54 }, { kind: 'key', name: 'OLD KEY', c: 62, r: 56 },
+    // ... the Roman ones below them
+    { kind: 'lamp', name: 'ROMAN OIL LAMP', c: 44, r: 72 }, { kind: 'mosaic', name: 'ROMAN MOSAIC', c: 102, r: 80 },
+    { kind: 'amphora', name: 'AMPHORA', c: 58, r: 86 }, { kind: 'legion', name: 'ROMAN HELMET', c: 20, r: 94 }
   ];
-  for (let k = 0, n = 0; n < 18 && k < 200; k++) {
+  for (const f of FOODS.concat(FINDS)) f.c = Math.round(f.c * WSX);
+  for (let k = 0, n = 0; n < 26 && k < 400; k++) {
     const c = 3 + (hash(k, 81) * (WCOLS - 6) | 0), r = 14 + (hash(k, 82) * (WROWS - 26) | 0);
     if (nearFood(c, r, 3) || FINDS.some(f => Math.abs(f.c - c) < 4 && Math.abs(f.r - r) < 4) || Math.abs(c - WSTART) < 3) continue;
     const kind = ['bronze', 'silver', 'gold'][Math.min(2, (r / WROWS * 3.4 + hash(k, 83) * 0.8) | 0)];   // deeper = more precious
     FINDS.push({ kind, coin: true, name: kind.toUpperCase() + ' COIN', c, r }); n++;
   }
-  for (const c of [52, 55, 58]) FINDS.push({ kind: 'gold', coin: true, name: 'GOLD COIN', c, r: WROWS - 7 });   // a little hoard at the bottom
+  for (const c of [WSTART - 4, WSTART - 1, WSTART + 2]) FINDS.push({ kind: 'gold', coin: true, name: 'GOLD COIN', c, r: WROWS - 7 });   // a little hoard at the bottom
   const finds = FINDS.map(f => ({ ...f, got: false }));
 
   const W = { dug: new Uint8Array(WCOLS * WROWS), body: [], dir: [0, 1], wait: 0, keys: [], goal: null,
@@ -855,7 +882,7 @@
   function drawWorld(t) {
     const [hc, hr] = W.body[0], WWpx = WCOLS * WC;
     let tx = hc * WC + 2 - VW / 2, ty = hr * WC + 2 - VHV * (W.open > 0 ? 0.76 : 0.62);   // lower while a card is open
-    tx = WWpx <= VW ? (WWpx - VW) / 2 : clamp(tx, -8, WWpx - VW + 8);
+    tx = WWpx + 2 * WALL * WC <= VW ? (WWpx - VW) / 2 : clamp(tx, -WALL * WC, WWpx - VW + WALL * WC);
     ty = clamp(ty, -VHV * 0.4, WROWS * WC - VHV + 4);
     W.camX += (tx - W.camX) * 0.15; W.camY += (ty - W.camY) * 0.15;
     const cx = Math.round(W.camX), cy = Math.round(W.camY);

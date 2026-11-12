@@ -75,7 +75,10 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
   WASD (tap or click = dig towards that spot, ◀ ▶ = a few cells sideways). Turning back makes the tail the head.
   The stops lie in the earth as food with their name above (Start = apple, Odds & Ends = mushroom, About me =
   carrot, Impressum = pear); the head next to one opens its card, eating "Start" fades back to the coaster.
-  Scattered finds: a few fossils and old coins (counter in the hint). At the bottom is unbreakable bedrock
+  The world is wide (280 cells; Jannes wanted the walls far apart, lots of room to dig).
+  Scattered finds (counter in the hint): a few fossils, old coins, things from the Middle Ages higher up
+  (knight helmet, sword, crown, key, shield, horseshoe, ring, goblet) and Roman ones below (amphora, helmet,
+  mosaic, oil lamp). He likes variety and historical finds. At the bottom is unbreakable bedrock
   (own speckled texture; Jannes asked for Minecraft bedrock, keep it an original design). The nav buttons
   lead out of the worm world to that stop.
 - Speed label above the cart shows the measured speed (8 px = 1 m).
