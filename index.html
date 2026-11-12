@@ -51,6 +51,7 @@
   .px, #hint, canvas#c, nav#stops, .postlink {
     -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation;
   }
+  canvas#c { touch-action: none; }            /* the worm's joystick needs every finger movement */
   .px:focus-visible { background: #ececec; outline: none; }
   @media (hover: hover) { .px:hover { background: #ececec; } }   /* no sticky grey after a tap on touch screens */
   .px:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 rgba(0,0,0,.35); }
@@ -689,7 +690,28 @@
   for (const el of [cv, nav, prevBtn, nextBtn, document.getElementById('snd')]) el.addEventListener('contextmenu', e => e.preventDefault());
   nextBtn.addEventListener('click', () => step(1));
   prevBtn.addEventListener('click', () => step(-1));
-  cv.addEventListener('click', e => { if (world === 1) tapWorld(e); else step(e.clientX < innerWidth / 2 ? -1 : 1); });
+  cv.addEventListener('click', e => {
+    if (world === 1) { if (performance.now() - joyEnd > 400) tapWorld(e); }
+    else step(e.clientX < innerWidth / 2 ? -1 : 1);
+  });
+  // touch in the worm world: a joystick appears where the finger lands and steers in every direction
+  let joy = null, joyEnd = 0;
+  cv.addEventListener('pointerdown', e => {
+    if (world !== 1 || e.pointerType === 'mouse') return;
+    joy = { id: e.pointerId, bx: e.clientX, by: e.clientY, x: e.clientX, y: e.clientY };
+    W.goal = null; W.ex = W.ey = 0;
+    try { cv.setPointerCapture(e.pointerId); } catch (e2) {}
+    e.preventDefault();
+  });
+  cv.addEventListener('pointermove', e => {
+    if (!joy || e.pointerId !== joy.id) return;
+    const dx = e.clientX - joy.bx, dy = e.clientY - joy.by, r = Math.hypot(dx, dy), max = 60;
+    if (r > max) { joy.bx = e.clientX - dx / r * max; joy.by = e.clientY - dy / r * max; }   // the base follows a far finger
+    joy.x = e.clientX; joy.y = e.clientY;
+  });
+  const joyStop = e => { if (joy && e.pointerId === joy.id) { joy = null; joyEnd = performance.now(); } };
+  cv.addEventListener('pointerup', joyStop);
+  cv.addEventListener('pointercancel', joyStop);
 
   // direct links such as jannesspliedt.com/#impressum
   function fromHash() {
@@ -904,7 +926,7 @@
     W.camX = WSTART * WC - VW / 2; W.camY = -VHV * 0.4;
     hunterSpawn(); H.wait = 5; H.flash = 0;
     showCard(-1);
-    hint.textContent = matchMedia('(pointer: coarse)').matches ? 'tap where to dig' : 'arrow keys or wasd to dig';
+    hint.textContent = matchMedia('(pointer: coarse)').matches ? 'touch and drag to steer' : 'arrow keys or wasd to dig';
   }
   const blocked = (c, r) => r < 0 || isBed(c, r);
   function wormMove(dc, dr, again) {
@@ -944,6 +966,14 @@
     if (W.leaving) { W.leaving += dt; if (W.leaving > 0.8) backToStart(); return; }
     W.wait = Math.max(0, W.wait - dt);
     let d = W.keys[W.keys.length - 1];
+    if (!d && joy) {                              // joystick: any angle, made of steps right/left and up/down
+      const dx = joy.x - joy.bx, dy = joy.y - joy.by, r = Math.hypot(dx, dy);
+      if (r > 10 && W.wait <= 0) {
+        W.ex = (W.ex || 0) + Math.abs(dx) / r; W.ey = (W.ey || 0) + Math.abs(dy) / r;
+        if (W.ex >= W.ey) { d = [Math.sign(dx), 0]; W.ex -= 1; } else { d = [0, Math.sign(dy)]; W.ey -= 1; }
+        if (d[0] === 0 && d[1] === 0) d = null;
+      }
+    }
     if (!d && W.goal) {
       const [hc, hr] = W.body[0], dx = W.goal[0] - hc, dy = W.goal[1] - hr;
       if (!dx && !dy) W.goal = null;
@@ -1011,11 +1041,103 @@
     W.goal = [clamp(Math.floor(wx / WC), 0, WCOLS - 1), clamp(Math.floor(wy / WC), 0, WROWS - 1)];
   }
 
+  // the meadow above the worm world: flowers, a giant tree and insects (all own designs)
+  const TREE_X = (WSTART + 46) * WC;
+  const plants = [];
+  for (let x = 3, k = 0; x < WCOLS * WC - 3; k++) {
+    const h = hash(k, 91);
+    if (Math.abs(x - TREE_X) > 40 && Math.abs(x - WSTART * WC - 2) > 6)
+      plants.push({ x, kind: h < 0.16 ? 'sun' : h < 0.38 ? 'tulip' : h < 0.56 ? 'blue' : h < 0.7 ? 'daisy' : 'grass',
+        col: ['#d8443c', '#f07aa8', '#f6d24a', '#9a5ad0'][(hash(k, 92) * 4) | 0], tall: (hash(k, 93) * 4) | 0 });
+    x += 5 + ((hash(k, 94) * 8) | 0);
+  }
+  function drawPlant(p, x, g, t) {               // g = screen y of the ground
+    const sway = Math.round(Math.sin(t * 1.3 + p.x * 0.07) * 0.6), R = (c, a, b, w, h) => { ctx.fillStyle = c; ctx.fillRect(x + a, g + b, w, h); };
+    if (p.kind === 'grass') { R('#3f8a3a', 0, -2, 1, 2); R('#6cc35a', 1 + sway, -3, 1, 3); R('#3f8a3a', 2, -2, 1, 2); return; }
+    if (p.kind === 'sun') {                      // sunflower: tall, with leaves and a big head
+      const hgt = 14 + p.tall * 2;
+      R('#3f8a3a', 0, -hgt, 1, hgt); R('#4f9f3f', -2, -6, 2, 1); R('#4f9f3f', 1, -9, 2, 1);
+      const hx = sway, hy = -hgt - 3;
+      R('#f6c21a', hx - 2, hy - 1, 5, 3); R('#f6c21a', hx - 1, hy - 2, 3, 5);
+      R('#ffe066', hx - 3, hy, 1, 1); R('#ffe066', hx + 3, hy, 1, 1); R('#ffe066', hx, hy - 3, 1, 1); R('#ffe066', hx, hy + 3, 1, 1);
+      R('#6b3f1c', hx - 1, hy - 1, 3, 3); R('#8a5a2b', hx, hy - 1, 1, 1);
+      return;
+    }
+    if (p.kind === 'tulip') {
+      const hgt = 5 + (p.tall >> 1);
+      R('#3f8a3a', 0, -hgt, 1, hgt); R('#4f9f3f', 1, -3, 1, 2);
+      R(p.col, sway - 1, -hgt - 3, 3, 3); R(p.col, sway - 1, -hgt - 4, 1, 1); R(p.col, sway + 1, -hgt - 4, 1, 1);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(x + sway - 1, g - hgt - 3, 1, 2);
+      return;
+    }
+    if (p.kind === 'blue') {                     // little light blue flowers in a clump
+      R('#3f8a3a', 0, -3, 1, 3); R('#3f8a3a', 2, -4, 1, 4);
+      for (const [a, b] of [[0, -4], [2, -5]]) {
+        R('#9fdcff', a + sway - 1, b, 3, 1); R('#9fdcff', a + sway, b - 1, 1, 3); R('#fff1a0', a + sway, b, 1, 1);
+      }
+      return;
+    }
+    R('#3f8a3a', 0, -3, 1, 3);                   // daisy
+    R('#ffffff', sway - 1, -4, 3, 1); R('#ffffff', sway, -5, 1, 3); R('#f6c21a', sway, -4, 1, 1);
+  }
+  function drawTree(x, g) {                      // a giant tree: thick trunk, roots, a huge crown
+    const R = (c, a, b, w, h) => { ctx.fillStyle = c; ctx.fillRect(x + a, g + b, w, h); };
+    const blob = (c, ox, oy, r) => { ctx.fillStyle = c; for (let j = -r; j <= r; j++) { const w = Math.round(Math.sqrt(r * r - j * j)); ctx.fillRect(x + ox - w, g + oy + j, 2 * w + 1, 1); } };
+    R('#5a3a1e', -8, -70, 16, 70); R('#6b4423', -6, -70, 10, 70); R('#7d5230', -4, -70, 3, 70);
+    for (let k = 0; k < 8; k++) R('#4a2f18', -6 + (k * 5) % 12, -66 + k * 8, 1, 4);           // bark
+    R('#5a3a1e', -13, -6, 5, 6); R('#5a3a1e', 8, -5, 6, 5); R('#5a3a1e', -17, -2, 4, 2); R('#5a3a1e', 14, -2, 5, 2);   // root flare
+    R('#5a3a1e', -26, -58, 20, 3); R('#5a3a1e', 6, -52, 22, 3);      // branches
+    blob('#24572b', -32, -80, 22); blob('#24572b', 32, -76, 22); blob('#24572b', 0, -92, 26);
+    blob('#2f6b34', -24, -84, 18); blob('#2f6b34', 26, -82, 18); blob('#2f6b34', 0, -96, 21);
+    blob('#3f8a3a', -14, -90, 11); blob('#3f8a3a', 15, -92, 12); blob('#3f8a3a', 2, -104, 10);
+    blob('#5aa84a', -10, -95, 4); blob('#5aa84a', 13, -99, 4); blob('#5aa84a', 0, -110, 3);
+  }
+  // roots of the giant tree reach into the earth (only drawn, the worm can eat through them)
+  const ROOTS = [[-6, 0, -22, 26], [4, 0, 18, 30], [0, 0, -2, 38], [-12, 2, -40, 16], [10, 2, 42, 20]];
+  const INSECTS = Array.from({ length: 14 }, (_, i) => ({ bee: i % 3 === 0, x: hash(i, 95) * WCOLS * WC, sp: 0.3 + hash(i, 96) * 0.5,
+    col: ['#f0902a', '#ffffff', '#9fdcff', '#f07aa8'][i % 4], ph: hash(i, 97) * 6.3 }));
+  function drawMeadow(cx, cy, t) {
+    const g = -cy;
+    if (g < -40 || g > VH + 140) return;
+    // roots first, over the earth
+    ctx.fillStyle = '#4a2f18';
+    for (const [x0, y0, x1, y1] of ROOTS) {
+      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+      for (let k = 0; k <= n; k++) {
+        const wx = TREE_X + Math.round(x0 + (x1 - x0) * k / n), wy = Math.round(y0 + (y1 - y0) * k / n + Math.sin(k / 4) * 2);
+        const c = Math.floor(wx / WC), r = Math.floor(wy / WC);
+        if (r >= 0 && W.dug[r * WCOLS + c]) continue;
+        ctx.fillRect(wx - cx, wy - cy, 2 - (k > n * 0.6 ? 1 : 0), 1);
+      }
+    }
+    if (TREE_X - cx > -80 && TREE_X - cx < VW + 80) drawTree(TREE_X - cx, g);
+    for (const p of plants) {
+      const x = p.x - cx;
+      if (x < -6 || x > VW + 6 || W.dug[Math.floor(p.x / WC)]) continue;     // eaten from below: gone
+      drawPlant(p, x, g, t);
+    }
+    for (const b of INSECTS) {
+      const x = Math.round(b.x + Math.sin(t * b.sp + b.ph) * 60 + Math.sin(t * 1.7 + b.ph) * 6) - cx;
+      const y = g - Math.round(b.bee ? 9 + 5 * Math.sin(t * 2.4 + b.ph) : 18 + 10 * Math.sin(t * 0.8 + b.ph) + 3 * Math.sin(t * 3 + b.ph));
+      if (x < -4 || x > VW + 4) continue;
+      if (b.bee) {                               // bee: striped body, flickering wings
+        ctx.fillStyle = '#f6c21a'; ctx.fillRect(x, y, 3, 2); ctx.fillStyle = '#1c1c1c'; ctx.fillRect(x + 1, y, 1, 2);
+        if (Math.sin(t * 40 + b.ph) > 0) { ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 1, y - 1, 1, 1); }
+      } else {                                   // butterfly: wings open and close
+        const open = Math.sin(t * 12 + b.ph) > 0;
+        ctx.fillStyle = b.col;
+        if (open) { ctx.fillRect(x - 2, y - 1, 2, 2); ctx.fillRect(x + 1, y - 1, 2, 2); ctx.fillRect(x - 1, y + 1, 1, 1); ctx.fillRect(x + 1, y + 1, 1, 1); }
+        else { ctx.fillRect(x - 1, y - 2, 1, 2); ctx.fillRect(x + 1, y - 2, 1, 2); }
+        ctx.fillStyle = '#1c1c1c'; ctx.fillRect(x, y - 1, 1, 3);
+      }
+    }
+  }
+
   function drawWorld(t) {
     const [hc, hr] = W.body[0], WWpx = WCOLS * WC;
-    let tx = hc * WC + 2 - VW / 2, ty = hr * WC + 2 - VHV * (W.open > 0 ? 0.76 : 0.62);   // lower while a card is open
+    let tx = hc * WC + 2 - VW / 2, ty = hr * WC + 2 - VHV * (W.open > 0 ? 0.76 : hr < 10 ? 0.74 : 0.62);   // lower while a card is open or near the meadow
     tx = WWpx + 2 * WALL * WC <= VW ? (WWpx - VW) / 2 : clamp(tx, -WALL * WC, WWpx - VW + WALL * WC);
-    ty = clamp(ty, -VHV * 0.4, WROWS * WC - VHV + 4);
+    ty = clamp(ty, -VHV * 0.8, WROWS * WC - VHV + 4);   // near the top you see the meadow and the big tree
     W.camX += (tx - W.camX) * 0.15; W.camY += (ty - W.camY) * 0.15;
     const cx = Math.round(W.camX), cy = Math.round(W.camY);
 
@@ -1049,6 +1171,7 @@
       if (h > 0.82) { ctx.fillStyle = band.front[2]; ctx.fillRect(x + (h * 13 | 0) % 4, y + (h * 7 | 0) % 4, 1, 1); }
       if (r === 0) { ctx.fillStyle = '#3f8a3a'; ctx.fillRect(x, y, WC, 1); ctx.fillStyle = h < 0.5 ? '#6cc35a' : '#3f8a3a'; ctx.fillRect(x + 1, y - 1, 1, 1); }
     }
+    drawMeadow(cx, cy, t);
     // finds
     for (const f of finds) {
       if (f.got) continue;
@@ -1116,6 +1239,20 @@
       drawText(p.text, x, y, '#f6d24a');
     }
     drawCounter();
+    if (joy) {                                   // the joystick under the finger
+      const rc = cv.getBoundingClientRect(), bx = Math.round((joy.bx - rc.left) / SC), by = Math.round((joy.by - rc.top) / SC);
+      let kx = (joy.x - joy.bx) / SC, ky = (joy.y - joy.by) / SC;
+      const r = Math.hypot(kx, ky), R = Math.round(60 / SC);
+      if (r > R) { kx *= R / r; ky *= R / r; }
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      for (let j = -R - 2; j <= R + 2; j++) { const w = Math.round(Math.sqrt(Math.max(0, (R + 2) * (R + 2) - j * j))); ctx.fillRect(bx - w, by + j, 2 * w + 1, 1); }
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      for (let j = -R - 2; j <= R + 2; j++) { const w = Math.round(Math.sqrt(Math.max(0, (R + 2) * (R + 2) - j * j))); ctx.fillRect(bx - w, by + j, 1, 1); ctx.fillRect(bx + w, by + j, 1, 1); }
+      const kxr = Math.round(bx + kx), kyr = Math.round(by + ky), k = Math.max(3, Math.round(24 / SC));
+      ctx.fillStyle = '#1c1c1c'; ctx.fillRect(kxr - k - 1, kyr - k + 1, 2 * k + 3, 2 * k - 1); ctx.fillRect(kxr - k + 1, kyr - k - 1, 2 * k - 1, 2 * k + 3);
+      ctx.fillStyle = '#f6d24a'; ctx.fillRect(kxr - k, kyr - k + 1, 2 * k + 1, 2 * k - 1); ctx.fillRect(kxr - k + 1, kyr - k, 2 * k - 1, 2 * k + 1);
+      ctx.fillStyle = '#fff1a0'; ctx.fillRect(kxr - k + 1, kyr - k + 1, 2, 1);
+    }
     if (H.flash > 0) { ctx.fillStyle = `rgba(200,20,40,${H.flash * 0.6})`; ctx.fillRect(0, 0, VW, VH); }
     // fade in after the fall, fade out when you eat "Start"
     const fade = Math.max(clamp(1 - wT / 0.8, 0, 1), clamp(W.leaving / 0.8, 0, 1));
