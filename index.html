@@ -450,7 +450,7 @@
     K: '101101110101101', L: '100100100100111', M: '101111111101101', N: '110101101101101', O: '010101101101010',
     P: '110101110100100', Q: '010101101110011', R: '110101110101101', S: '011100010001110', T: '111010010010010',
     U: '101101101101111', V: '101101101101010', W: '101101111111101', X: '101101010101101', Y: '101101010010010',
-    Z: '111001010100111', '-': '000000111000000', ' ': '000000000000000', '!': '010010010000010', '/': '001001010100100', '&': '010101010101011',
+    Z: '111001010100111', '-': '000000111000000', '+': '000010111010000', ' ': '000000000000000', '!': '010010010000010', '/': '001001010100100', '&': '010101010101011',
     0: '111101101101111', 1: '010110010010111', 2: '111001111100111', 3: '111001111001111', 4: '101101111001001',
     5: '111100111001111', 6: '111100111101111', 7: '111001001001001', 8: '111101111101111', 9: '111101111001111'
   };
@@ -778,23 +778,30 @@
   for (let k = 0, n = 0; n < 26 && k < 400; k++) {
     const c = 3 + (hash(k, 81) * (WCOLS - 6) | 0), r = 14 + (hash(k, 82) * (WROWS - 26) | 0);
     if (nearFood(c, r, 3) || FINDS.some(f => Math.abs(f.c - c) < 4 && Math.abs(f.r - r) < 4) || Math.abs(c - WSTART) < 3) continue;
-    const kind = ['bronze', 'silver', 'gold'][Math.min(2, (r / WROWS * 3.4 + hash(k, 83) * 0.8) | 0)];   // deeper = more precious
+    const kind = r / WROWS + hash(k, 83) * 0.3 > 0.62 ? 'gold' : 'silver';   // deeper = more gold
     FINDS.push({ kind, coin: true, name: kind.toUpperCase() + ' COIN', c, r }); n++;
   }
   for (const c of [WSTART - 4, WSTART - 1, WSTART + 2]) FINDS.push({ kind: 'gold', coin: true, name: 'GOLD COIN', c, r: WROWS - 7 });   // a little hoard at the bottom
-  const finds = FINDS.map(f => ({ ...f, got: false }));
+  // what each find is worth on the coin counter: silver 1, gold 2, Middle Ages 5, Romans 10 (fossils: nothing)
+  const MEDIEVAL = ['knight', 'sword', 'crown', 'key', 'shield', 'horseshoe', 'ring', 'goblet'], ROMAN = ['amphora', 'legion', 'mosaic', 'lamp'];
+  const worth = f => f.kind === 'silver' ? 1 : f.kind === 'gold' ? 2 : MEDIEVAL.includes(f.kind) ? 5 : ROMAN.includes(f.kind) ? 10 : 0;
+  const finds = FINDS.map(f => ({ ...f, got: false, worth: worth(f) }));
 
   const W = { dug: new Uint8Array(WCOLS * WROWS), body: [], dir: [0, 1], wait: 0, keys: [], goal: null,
-    open: -1, arrow: -1, forced: false, leaving: 0, camX: 0, camY: 0, crumbs: [], pops: [], got: 0 };
+    open: -1, arrow: -1, forced: false, leaving: 0, camX: 0, camY: 0, crumbs: [], pops: [], got: 0, coins: 0 };
   for (let r = 0; r < 6; r++) W.dug[r * WCOLS + WSTART] = 1;     // the shaft you fell down
 
-  // the hunter: a fat worm, two cells thick, that eats a 2x2 hole and chases you, but more slowly
-  const H = { body: [], dir: [-1, 0], wait: 0, flash: 0 };
+  // the hunter: a mole, two cells big, that digs a 2x2 hole and chases you, but more slowly
+  const H = { body: [], dir: [-1, 0], face: -1, wait: 0, flash: 0, chew: 0 };
+  const MOLE = ['....KKKKK.....', '..KKkkkkkKK...', '.KkkhhkkkkkK..', 'KkkhhkkkkkwkK.', 'KkkkkkkkkkkkPP',
+    'KkkkkkkkkkmmPP', '.KkkkkkkkkmmP.', '..KkkkkkkkkK..', '.ppp.KK.pppp..', 'pp.p.....p.pp.'];
+  const MOLE_SHUT = MOLE.map((row, j) => j === 5 || j === 6 ? row.replace(/m/g, 'k') : row);
+  const MOLE_PAL = { K: '#16131a', k: '#5b5364', h: '#7a7186', w: '#ffffff', P: '#f4a3b5', m: '#8a1c2e', p: '#f4a3b5' };
   const hunterFits = (c, r) => r >= 0 && !isBed(c, r) && !isBed(c + 1, r) && !isBed(c, r + 1) && !isBed(c + 1, r + 1);
   function hunterSpawn() {                       // far away from you, a good way down
     const c = W.body.length && W.body[0][0] > WCOLS / 2 ? 30 : WCOLS - 32, r = 64;
-    H.body = []; for (let k = 0; k < 7; k++) H.body.push([c + (c < WCOLS / 2 ? -k : k) * 2, r]);
-    H.dir = [c < WCOLS / 2 ? 1 : -1, 0]; H.wait = 3;
+    H.body = []; for (let k = 0; k < 2; k++) H.body.push([c + (c < WCOLS / 2 ? -k : k) * 2, r]);
+    H.dir = [c < WCOLS / 2 ? 1 : -1, 0]; H.face = H.dir[0]; H.wait = 3;
   }
   function hunterMove() {
     const [hc, hr] = H.body[0], [pc, pr] = W.body[0];
@@ -809,7 +816,7 @@
         const k = (nr + b) * WCOLS + nc + a;
         if (!W.dug[k]) { fresh++; W.dug[k] = 1; }
       }
-      H.body.unshift([nc, nr]); H.body.pop(); H.dir = [dc, dr];
+      H.body.unshift([nc, nr]); H.body.pop(); H.dir = [dc, dr]; if (dc) H.face = dc; if (fresh) H.chew = 0.12;
       H.wait += fresh ? 0.17 : 0.12;              // slower than you, so you can always get away
       if (fresh) {
         const band = BANDS[wBand(nc, nr)];
@@ -820,15 +827,20 @@
     }
     H.wait = 0.2;
   }
-  function caught() {                            // back to the top, the hunter goes back to its lair
+  function caught() {                            // all the way back to the start of the coaster, the earth closes again
     const [pc, pr] = W.body[0];
     W.pops.push({ text: 'CAUGHT!', x: pc * WC + 2, y: pr * WC - 6, t: 1.4 });
-    W.body = []; for (let r = 5; r >= -2; r--) W.body.push([WSTART, r]);
-    W.dir = [0, 1]; W.wait = 0.4; W.keys = []; W.goal = null;
-    H.flash = 0.5; hunterSpawn();
+    W.keys = []; W.goal = null; W.arrow = -1;
+    H.flash = 0.5; W.leaving = 0.001; W.caught = true; showCard(-1);
   }
 
+
   function backToStart() {                       // fade in again just before the start and roll into it
+    if (W.caught) {                              // caught by the mole: the earth closes again and the finds are buried again
+      W.caught = false; W.dug.fill(0); W.got = 0; W.coins = 0;
+      for (let r = 0; r < 6; r++) W.dug[r * WCOLS + WSTART] = 1;
+      for (const f of finds) f.got = false;
+    }
     world = 0; falling = false; wrapping = false; s = ENTER_S; entering = true; camInit = false; v = 150; tRide = 1;
     riding = true; target = 0; idx = 0; showCard(-1);
     if (reduced) { arrive(); camInit = false; }
@@ -865,8 +877,9 @@
         vy: -20 - Math.random() * 30, t: 0.5, col: band.front[q] });
     }
     for (const f of finds) if (!f.got && (f.coin ? f.c === nc && f.r === nr : nc >= f.c && nc <= f.c + 1 && nr >= f.r && nr <= f.r + 1)) {
-      f.got = true; W.got++;
-      W.pops.push({ text: f.name, x: nc * WC + 2, y: nr * WC - 6, t: 1.6 });
+      f.got = true; W.got++; W.coins += f.worth;
+      W.pops.push({ text: f.name + (f.worth ? ' +' + f.worth : ''), x: nc * WC + 2, y: nr * WC - 6, t: 1.6 });
+      W.bump = 0.3;
       hint.textContent = `finds ${W.got} / ${finds.length}`;
     }
     return true;
@@ -1022,20 +1035,14 @@
         drawArrow(Math.round(hx + dx * (k - pulse)), Math.round(hy + dy * (k - pulse)), ang);
       }
     }
-    // the hunter
-    for (let k = H.body.length - 1; k >= 0; k--) {
-      const x = H.body[k][0] * WC - cx, y = H.body[k][1] * WC - cy;
-      if (x < -10 || x > VW + 2 || y < -10 || y > VH + 2) continue;
-      ctx.fillStyle = k === 0 ? '#8e4f9c' : k % 2 ? '#5b3266' : '#74407f';
-      ctx.fillRect(x, y, 2 * WC, 2 * WC);
-      ctx.fillStyle = '#a868b5'; ctx.fillRect(x + 1, y + 1, 2, 1);
-    }
+    // the hunter: a mole with its mouth open while it digs
     {
-      const x = H.body[0][0] * WC - cx, y = H.body[0][1] * WC - cy, [dc, dr] = H.dir;
-      for (const sd of [-1, 1]) {                 // two angry eyes looking where it goes
-        const ex = x + 3 + Math.round(dc * 2.5 - dr * sd * 2), ey = y + 3 + Math.round(dr * 2.5 + dc * sd * 2);
-        ctx.fillStyle = '#ffffff'; ctx.fillRect(ex, ey, 2, 2);
-        ctx.fillStyle = '#c0182a'; ctx.fillRect(ex + (dc > 0 ? 1 : 0), ey + (dr > 0 ? 1 : 0), 1, 1);
+      H.chew = Math.max(0, H.chew - 1 / 60);
+      const x = H.body[0][0] * WC - cx - 3, y = H.body[0][1] * WC - cy - 1, spr = H.chew > 0 || Math.sin(t * 9) > 0 ? MOLE : MOLE_SHUT;
+      for (let j = 0; j < 10; j++) for (let k = 0; k < 14; k++) {
+        const ch = spr[j][k];
+        if (ch === '.') continue;
+        ctx.fillStyle = MOLE_PAL[ch]; ctx.fillRect(H.face > 0 ? x + k : x + 13 - k, y + j, 1, 1);
       }
     }
     // the worm
@@ -1056,6 +1063,17 @@
       const w = textW(p.text), x = clamp(Math.round(p.x - cx - w / 2), 2, VW - w - 2), y = Math.round(p.y - cy);
       ctx.fillStyle = '#1c1c1c'; ctx.fillRect(x - 1, y - 1, w + 2, 7);
       drawText(p.text, x, y, '#f6d24a');
+    }
+    // the coin counter, bottom middle
+    {
+      W.bump = Math.max(0, (W.bump || 0) - 1 / 60);
+      const txt = String(W.coins), w = 9 + textW(txt), x = (VW - w) >> 1, y = VHV - Math.round(50 / SC) - 9 - (W.bump > 0.15 ? 1 : 0);
+      ctx.fillStyle = '#1c1c1c'; ctx.fillRect(x - 3, y - 2, w + 6, 10);
+      const [a, l, d] = COINS.gold;
+      ctx.fillStyle = a; ctx.fillRect(x + 1, y, 3, 6); ctx.fillRect(x, y + 1, 5, 4);
+      ctx.fillStyle = d; ctx.fillRect(x + 1, y + 5, 3, 1); ctx.fillRect(x + 4, y + 1, 1, 4);
+      ctx.fillStyle = l; ctx.fillRect(x + 1, y + 1, 1, 2);
+      drawText(txt, x + 9, y + 1, '#f6d24a');
     }
     if (H.flash > 0) { ctx.fillStyle = `rgba(200,20,40,${H.flash * 0.6})`; ctx.fillRect(0, 0, VW, VH); }
     // fade in after the fall, fade out when you eat "Start"
