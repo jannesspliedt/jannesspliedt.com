@@ -78,7 +78,10 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
   The world is wide (280 cells; Jannes wanted the walls far apart, lots of room to dig).
   Scattered finds (counter in the hint): a few fossils, old coins, things from the Middle Ages higher up
   (knight helmet, sword, crown, key, shield, horseshoe, ring, goblet) and Roman ones below (amphora, helmet,
-  mosaic, oil lamp). He likes variety and historical finds. At the bottom is unbreakable bedrock
+  mosaic, oil lamp). He likes variety and historical finds.
+  A hunter worm (`H`, purple, two cells thick, eats a 2x2 hole) chases your head, slower than you
+  (0.17 s per cell in earth vs. your 0.1 s). If it catches you: "CAUGHT!", red flash, you start again at
+  the top and it goes back to its lair far away. It waits 5 s after you land. At the bottom is unbreakable bedrock
   (own speckled texture; Jannes asked for Minecraft bedrock, keep it an original design). In the worm
   world the nav buttons do not leave it: a yellow arrow appears and points to that stop's food (at the
   screen edge while it is off-screen, above the food once it is visible) until it is eaten. Exception for

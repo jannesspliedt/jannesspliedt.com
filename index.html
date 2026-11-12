@@ -788,6 +788,46 @@
     open: -1, arrow: -1, forced: false, leaving: 0, camX: 0, camY: 0, crumbs: [], pops: [], got: 0 };
   for (let r = 0; r < 6; r++) W.dug[r * WCOLS + WSTART] = 1;     // the shaft you fell down
 
+  // the hunter: a fat worm, two cells thick, that eats a 2x2 hole and chases you, but more slowly
+  const H = { body: [], dir: [-1, 0], wait: 0, flash: 0 };
+  const hunterFits = (c, r) => r >= 0 && !isBed(c, r) && !isBed(c + 1, r) && !isBed(c, r + 1) && !isBed(c + 1, r + 1);
+  function hunterSpawn() {                       // far away from you, a good way down
+    const c = W.body.length && W.body[0][0] > WCOLS / 2 ? 30 : WCOLS - 32, r = 64;
+    H.body = []; for (let k = 0; k < 7; k++) H.body.push([c + (c < WCOLS / 2 ? -k : k) * 2, r]);
+    H.dir = [c < WCOLS / 2 ? 1 : -1, 0]; H.wait = 3;
+  }
+  function hunterMove() {
+    const [hc, hr] = H.body[0], [pc, pr] = W.body[0];
+    const dx = pc - (hc + 0.5), dy = pr - (hr + 0.5);
+    const sx = [Math.sign(dx) || 1, 0], sy = [0, Math.sign(dy) || 1];
+    const opts = Math.abs(dx) >= Math.abs(dy) ? [sx, sy, [0, -sy[1]], [-sx[0], 0]] : [sy, sx, [-sx[0], 0], [0, -sy[1]]];
+    for (const [dc, dr] of opts) {
+      const nc = hc + dc, nr = hr + dr;
+      if (!hunterFits(nc, nr) || (H.body[1] && H.body[1][0] === nc && H.body[1][1] === nr)) continue;
+      let fresh = 0;
+      for (const [a, b] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
+        const k = (nr + b) * WCOLS + nc + a;
+        if (!W.dug[k]) { fresh++; W.dug[k] = 1; }
+      }
+      H.body.unshift([nc, nr]); H.body.pop(); H.dir = [dc, dr];
+      H.wait += fresh ? 0.17 : 0.12;              // slower than you, so you can always get away
+      if (fresh) {
+        const band = BANDS[wBand(nc, nr)];
+        for (let q = 0; q < 3; q++) W.crumbs.push({ x: nc * WC + 4, y: nr * WC + 4, vx: (Math.random() - 0.5) * 50 - dc * 20,
+          vy: -20 - Math.random() * 30, t: 0.5, col: band.front[q] });
+      }
+      return;
+    }
+    H.wait = 0.2;
+  }
+  function caught() {                            // back to the top, the hunter goes back to its lair
+    const [pc, pr] = W.body[0];
+    W.pops.push({ text: 'CAUGHT!', x: pc * WC + 2, y: pr * WC - 6, t: 1.4 });
+    W.body = []; for (let r = 5; r >= -2; r--) W.body.push([WSTART, r]);
+    W.dir = [0, 1]; W.wait = 0.4; W.keys = []; W.goal = null;
+    H.flash = 0.5; hunterSpawn();
+  }
+
   function backToStart() {                       // fade in again just before the start and roll into it
     world = 0; falling = false; wrapping = false; s = ENTER_S; entering = true; camInit = false; v = 150; tRide = 1;
     riding = true; target = 0; idx = 0; showCard(-1);
@@ -799,6 +839,7 @@
     W.body = []; for (let r = 5; r >= -2; r--) W.body.push([WSTART, r]);
     W.dir = [0, 1]; W.wait = 0.4; W.keys = []; W.goal = null; W.open = -1; W.arrow = -1; W.forced = false; W.leaving = 0; W.crumbs = []; W.pops = [];
     W.camX = WSTART * WC - VW / 2; W.camY = -VHV * 0.4;
+    hunterSpawn(); H.wait = 5; H.flash = 0;
     showCard(-1);
     hint.textContent = matchMedia('(pointer: coarse)').matches ? 'tap where to dig' : 'arrow keys or wasd to dig';
   }
@@ -848,6 +889,14 @@
       }
     }
     if (d && W.wait <= 0 && !wormMove(d[0], d[1])) { W.goal = null; W.wait = 0.1; }
+    // the hunter
+    H.flash = Math.max(0, H.flash - dt);
+    H.wait -= dt;
+    if (H.wait <= 0) hunterMove();
+    {
+      const [hc, hr] = H.body[0], [pc, pr] = W.body[0];
+      if (pc >= hc && pc <= hc + 1 && pr >= hr && pr <= hr + 1) caught();
+    }
     // is the head at one of the stops?
     const [hc, hr] = W.body[0];
     const f = FOODS.find(f => hc >= f.c - 2 && hc <= f.c + 3 && hr >= f.r - 2 && hr <= f.r + 3);
@@ -973,6 +1022,22 @@
         drawArrow(Math.round(hx + dx * (k - pulse)), Math.round(hy + dy * (k - pulse)), ang);
       }
     }
+    // the hunter
+    for (let k = H.body.length - 1; k >= 0; k--) {
+      const x = H.body[k][0] * WC - cx, y = H.body[k][1] * WC - cy;
+      if (x < -10 || x > VW + 2 || y < -10 || y > VH + 2) continue;
+      ctx.fillStyle = k === 0 ? '#8e4f9c' : k % 2 ? '#5b3266' : '#74407f';
+      ctx.fillRect(x, y, 2 * WC, 2 * WC);
+      ctx.fillStyle = '#a868b5'; ctx.fillRect(x + 1, y + 1, 2, 1);
+    }
+    {
+      const x = H.body[0][0] * WC - cx, y = H.body[0][1] * WC - cy, [dc, dr] = H.dir;
+      for (const sd of [-1, 1]) {                 // two angry eyes looking where it goes
+        const ex = x + 3 + Math.round(dc * 2.5 - dr * sd * 2), ey = y + 3 + Math.round(dr * 2.5 + dc * sd * 2);
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(ex, ey, 2, 2);
+        ctx.fillStyle = '#c0182a'; ctx.fillRect(ex + (dc > 0 ? 1 : 0), ey + (dr > 0 ? 1 : 0), 1, 1);
+      }
+    }
     // the worm
     const b = W.body;
     for (let k = b.length - 1; k >= 0; k--) {
@@ -992,6 +1057,7 @@
       ctx.fillStyle = '#1c1c1c'; ctx.fillRect(x - 1, y - 1, w + 2, 7);
       drawText(p.text, x, y, '#f6d24a');
     }
+    if (H.flash > 0) { ctx.fillStyle = `rgba(200,20,40,${H.flash * 0.6})`; ctx.fillRect(0, 0, VW, VH); }
     // fade in after the fall, fade out when you eat "Start"
     const fade = Math.max(clamp(1 - wT / 0.8, 0, 1), clamp(W.leaving / 0.8, 0, 1));
     if (fade > 0) { ctx.fillStyle = `rgba(0,0,0,${fade})`; ctx.fillRect(0, 0, VW, VH); }
