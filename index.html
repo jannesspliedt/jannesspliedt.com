@@ -1073,9 +1073,9 @@
   for (let x = 4, k = 0; x < WCOLS * WC - 4; k++) {
     const h = hash(k, 91);
     if (TREES.every(tr => Math.abs(x - tr.x) > TRUNK_W[tr.kind] * tr.S + 8) && Math.abs(x - WSTART * WC - 2) > 10)
-      plants.push({ x, kind: h < 0.16 ? 'sun' : h < 0.38 ? 'tulip' : h < 0.56 ? 'blue' : h < 0.7 ? 'daisy' : 'grass',
+      plants.push({ x, kind: h < 0.2 ? 'sun' : h < 0.46 ? 'tulip' : h < 0.68 ? 'blue' : h < 0.88 ? 'daisy' : 'grass',
         col: ['#d8443c', '#f07aa8', '#f6d24a', '#9a5ad0'][(hash(k, 92) * 4) | 0], tall: (hash(k, 93) * 4) | 0 });
-    x += 10 + ((hash(k, 94) * 16) | 0);
+    x += 7 + ((hash(k, 94) * 9) | 0);
   }
   function drawPlant(p, x, g, t) {               // g = screen y of the ground; one plant pixel = PS screen pixels
     const sway = Math.round(Math.sin(t * 1.3 + p.x * 0.03) * 0.6);
@@ -1136,6 +1136,11 @@
     const g = -cy;
     if (g < -10 || g > VH + 240) return;
     for (const tr of TREES) { const x = tr.x - cx; if (x > -60 * tr.S && x < VW + 60 * tr.S) drawTree(tr, x, g); }
+    for (let x = ((-cx % 6) + 6) % 6 - 6; x < VW + 6; x += 6) {          // a carpet of grass blades between the flowers
+      const wx = x + cx, h = hash(Math.floor(wx / 6), 98);
+      if (wx < 0 || wx >= WCOLS * WC || W.dug[Math.floor(wx / WC)]) continue;
+      ctx.fillStyle = h < 0.5 ? '#3f8a3a' : '#5aa84a'; ctx.fillRect(x, g - 2 - (h * 4 | 0), 2, 2 + (h * 4 | 0));
+    }
     for (const p of plants) {
       const x = p.x - cx;
       if (x < -12 || x > VW + 12 || W.dug[Math.floor(p.x / WC)]) continue;     // eaten from below: gone
