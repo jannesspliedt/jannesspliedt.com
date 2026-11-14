@@ -281,6 +281,13 @@
       Analyse- oder Tracking-Tools und lädt keine externen Schriftarten oder Skripte.
     </p>
     <p>
+      <strong>Spielstand im Browser:</strong> Damit gesammelte Münzen und gekaufte Skins des kleinen Spiels auf
+      dieser Seite erhalten bleiben, wird der Spielstand im lokalen Speicher Ihres Browsers (Local Storage)
+      abgelegt. Er enthält nur den Münzstand und die Auswahl der Skins, keine personenbezogenen Angaben, wird
+      nicht an mich oder Dritte übertragen und dient ausschließlich dieser Funktion (§ 25 Abs. 2 Nr. 2 TDDDG).
+      Sie können ihn jederzeit löschen, indem Sie die Websitedaten in Ihrem Browser entfernen.
+    </p>
+    <p>
       <strong>Kontakt per E-Mail:</strong> Wenn Sie mir eine E-Mail schreiben, verarbeite ich Ihre Angaben
       (E-Mail-Adresse, Name und Inhalt der Nachricht) ausschließlich zur Bearbeitung Ihrer Anfrage.
       Rechtsgrundlage ist Art. 6 Abs. 1 lit. f DSGVO bzw. lit. b DSGVO, sofern die Anfrage auf einen Vertrag
@@ -1324,11 +1331,36 @@
   for (const it of ITEMS) { it.owned = it.price === 0; if (it.type === 'cart') it.img = makeCart(true, it.cols); }
   const worn = { cart: ITEMS[0], worm: ITEMS[6] };
   const SH = { sel: 0, t: 0, leaving: 0, msg: '', msgT: 0, shake: 0 };
+  // The coins and the skins are kept in the browser's local storage (see the Datenschutzerklärung). Nothing is sent anywhere.
+  const SAVE_KEY = 'jannesspliedt-game';
+  let saved = '';
+  function save() {
+    try {
+      const str = JSON.stringify({ v: 1, coins, owned: ITEMS.filter(it => it.owned && it.price > 0).map(it => it.type + ':' + it.name),
+        cart: worn.cart.name, worm: worn.worm.name });
+      if (str !== saved) { localStorage.setItem(SAVE_KEY, str); saved = str; }
+    } catch (e) {}                                  // private mode or storage switched off: the game just does not remember
+  }
+  function load() {
+    try {
+      const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+      if (!d || d.v !== 1) return;
+      if (Number.isFinite(d.coins) && d.coins >= 0) coins = Math.floor(d.coins);
+      for (const it of ITEMS) if (Array.isArray(d.owned) && d.owned.includes(it.type + ':' + it.name)) it.owned = true;
+      for (const [type, name] of [['cart', d.cart], ['worm', d.worm]]) {
+        const it = ITEMS.find(q => q.type === type && q.name === name && q.owned);
+        if (it) wear(it);
+      }
+    } catch (e) {}
+  }
+  setInterval(save, 1500);
+  addEventListener('pagehide', save);
   function wear(it) {
     worn[it.type] = it;
     if (it.type === 'cart') { cartIdle = makeCart(false, it.cols); cartFun = makeCart(true, it.cols); }
     else wormCols = it.cols;
   }
+  load();
   function enterShop() {
     world = 2; flying = false; airT = 0; hopOn = null; riding = false; boost = false; v = 0;
     SH.sel = 0; SH.t = 0; SH.leaving = 0; SH.msg = ''; SH.msgT = 0; SH.shake = 0;

@@ -18,7 +18,8 @@ There is nothing to build: the repository root is served as is.
 ## Hard rules
 
 - **No external requests.** No web fonts, CDNs, analytics or embeds. The Datenschutzerklärung in the
-  Impressum states that the page loads nothing external and sets no cookies. If that ever changes,
+  Impressum states that the page loads nothing external and sets no cookies. The only thing stored is
+  the game state (coins and skins) in localStorage, which the Datenschutzerklärung describes. If that ever changes,
   the Datenschutzerklärung must be updated in the same commit.
 - **Impressum stays reachable from everywhere** (nav button, `#impressum`, `#datenschutz`). It is a
   legal requirement in Germany. Name, address and e-mail in it were given by Jannes; do not change
@@ -102,8 +103,9 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
   (`airT`) a propeller appears, the cart flies up (`flying`) and lands on a hidden cloud with a skin shop
   (`world` = 2, section "the hidden cloud"). `ITEMS`: cart skins and worm skins bought with `coins`, plus
   "BACK DOWN". ← → browse, Enter/Space/↑ or a tap in the middle buys or wears, ↓/Esc leaves; the nav
-  buttons leave to that stop. Purchases live in memory only (no localStorage: the Datenschutzerklärung says
-  nothing is stored; storing them would need an update there).
+  buttons leave to that stop. Coins, bought skins and the worn skins are kept
+  in localStorage (`SAVE_KEY`, `save`/`load`, Jannes chose this on 2026-11-14); the Datenschutzerklärung has
+  a paragraph "Spielstand im Browser" for it. If more is ever stored, update that paragraph in the same commit.
 
 ## How the script is organised (inside `index.html`)
 
