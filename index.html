@@ -1489,21 +1489,23 @@
   // ... but anything unkind about Jannes costs every coin and every skin
   const UNKIND = ['nicht der beste', 'schlecht', 'doof', 'dumm', 'blöd', 'bloed', 'scheiße', 'scheisse', 'kacke', 'mies', 'hässlich', 'haesslich',
     'nervig', 'langweilig', 'verlierer', 'versager', 'idiot', 'loser', 'worst', 'bad', 'stupid', 'dumb', 'ugly', 'lame', 'sucks', 'boring', 'not the best'];
+  function cheatEnter() {                        // only counts once you press Enter
+    const v = cheat.value.toLowerCase();
+    if (!(v.includes('jannes') && UNKIND.some(w => v.includes(w)))) return;
+    cheat.value = ''; coins = 0; SH.msgT = 2.4; SH.bad = true;
+    for (const it of ITEMS) it.owned = it.price === 0;
+    wear(ITEMS.find(it => it.type === 'cart' && it.price === 0)); wear(ITEMS.find(it => it.type === 'rider' && it.price === 0)); save();
+  }
   cheat.addEventListener('input', () => {
     if (world !== 2) return;
     const v = cheat.value.toLowerCase();
-    if (v.includes('jannes') && UNKIND.some(w => v.includes(w))) {
-      cheat.value = ''; coins = 0; SH.msgT = 2.4; SH.bad = true;
-      for (const it of ITEMS) it.owned = it.price === 0;
-      wear(ITEMS.find(it => it.type === 'cart' && it.price === 0)); wear(ITEMS.find(it => it.type === 'rider' && it.price === 0)); save();
-      return;
-    }
     if (!v.includes(PHRASE)) return;
     cheat.value = ''; coins += 10; bump = 0.3; SH.msgT = 1.6; SH.bad = false; save();
   });
   function cloudKey(e) {
     const k = e.key;
     if (k === 'Escape' || k === 'ArrowDown') { e.preventDefault(); if (!SH.leaving) SH.leaving = 0.001; }
+    else if (k === 'Enter') { e.preventDefault(); cheatEnter(); }
     else if (e.target !== cheat && k.length === 1) cheat.focus();      // just start typing
   }
   function updateCloud(dt) {
