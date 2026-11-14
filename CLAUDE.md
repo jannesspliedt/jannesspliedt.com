@@ -39,9 +39,10 @@ There is nothing to build: the repository root is served as is.
 | Start | `start` | Only the line "Press → to ride to the next stop and ← to go back." |
 | Odds & Ends | `odds-and-ends` | Blog. List of posts, click opens one. Empty for now. |
 | About me | `about` | Only Education, Work Experience, Languages – no prose, no contact block. Awards and scholarships are listed under the education they belong to (`small.hl`, with a star); no Aachen Investment Club (Jannes, 2026-11-14). Institution in bold, degree/role in the small line. Taken from his CV. |
+| Shop | `shop` | Riders first, then carts, as buttons with a pixel preview; bought with coins. Built by `renderShop`. Without JavaScript only a note. |
 | Impressum | `impressum` | Impressum and Datenschutzerklärung (German). |
 
-Deep links: `#about`, `#impressum`, `#odds-and-ends/<post-slug>`.
+Deep links: `#about`, `#shop`, `#impressum`, `#odds-and-ends/<post-slug>`.
 
 ## Blog posts (`posts.js`)
 
@@ -76,7 +77,7 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
   WASD (click = dig towards that spot, ◀ ▶ = a few cells sideways). On touch screens a floating joystick
   appears where the finger lands (like slither.io) and steers in any angle (diagonals = alternating steps). Turning back makes the tail the head.
   The stops lie in the earth as food with their name above (Start = apple, Odds & Ends = mushroom, About me =
-  carrot, Impressum = pear); the head next to one opens its card, eating "Start" fades back to the coaster.
+  carrot, Shop = plum, Impressum = pear); the head next to one opens its card, eating "Start" fades back to the coaster.
   The world is wide (280 cells; Jannes wanted the walls far apart, lots of room to dig).
   The surface is a meadow (`drawMeadow`), drawn big to suit the worm (meadow pixels are `PS` = 2 px):
   sunflowers, tulips, light blue flowers, daisies, grass, butterflies and bees, and `TREES` (oaks and pines,
@@ -100,17 +101,20 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
   The cart collects them in the air; they come back at every stop (`arrive`). Counter shows once coins > 0.
 
 - **Propeller and cloud shop**: jumping back and forth keeps the cart in the air; after more than 3 s airborne
-  (`airT`) a propeller appears, the cart flies up (`flying`) and lands on a hidden cloud with a skin shop
-  (`world` = 2, section "the hidden cloud"). `ITEMS`: cart skins and rider skins bought with `coins`, plus
-  "BACK DOWN". Riders are defined in `PEOPLE` (CLASSIC; MORGANE: green scarf, old brown leather jacket, black
+  (`airT`) a propeller appears, the cart flies up (`flying`) and lands on a hidden cloud (`world` = 2,
+  `enterCloud`, `drawCloud`). The shop used to be up there; since 2026-11-14 it is a normal stop on the line between
+  About me and Impressum (card `#shop`, `SHOP_I`; its leg from About me has no jump, the sky treats About me →
+  Impressum as one leg via `SKY_S`; in the worm world its food is a plum). On the cloud a sign says to type
+  "jannes ist der beste" into the text field `#cheat`: every time gives 10 coins, without limit (Jannes wanted
+  exactly that). ↓/Esc, ◀ ▶ or a nav button lead back down. The typed text is not stored anywhere.
+  `ITEMS`: rider skins and cart skins bought with `coins`. Riders are defined in `PEOPLE` (CLASSIC; MORGANE: green scarf, old brown leather jacket, black
   trousers, small silver spiral necklace; JOOST: not a person but one giant beer; JAY LAZER, that is Jannes himself: grey jumper, blue jeans,
   crown with many jewels; WOLF: a wolf in a jumper with a flag of the world, own design) and drawn by `makeCart` (in the cart) and `drawPerson` (shop tile). There are no worm
   A rider can have its own text in the scream bubble of the fall (`scream`): Wolf "GOOGLE EARTH", Joost "APRES SKI".
   Jay Lazer is the first rider on offer; while he is worn, changing direction 7 times within 2.5 s (`flips` in
   `step`) shoots laser beams from his eyes for 2.5 s (`lazT`, drawn with the cart). There are no worm
   skins any more (Jannes, 2026-11-14): the worm takes the look of the worn rider (`worn.rider.p`). Old saves
-  with a worm skin get the coins back once (`OLD_WORM_SKINS`). ← → browse, Enter/Space/↑ or a tap in the middle buys or wears, ↓/Esc leaves; the nav
-  buttons leave to that stop. Coins, bought skins and the worn skins are kept
+  with a worm skin get the coins back once (`OLD_WORM_SKINS`). Coins, bought skins and the worn skins are kept
   in localStorage (`SAVE_KEY`, `save`/`load`, Jannes chose this on 2026-11-14); the Datenschutzerklärung has
   a paragraph "Spielstand im Browser" for it. If more is ever stored, update that paragraph in the same commit.
 
@@ -129,7 +133,7 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
   crystals, gems in the deep stone, creatures (`drawCritters`, `drawLurker`, `drawBeast`).
 - **Worm world**: section "after the fall: a worm in the earth". Grid of 4 px cells (`WC`, `WCOLS`, `WROWS`),
   `W` holds tunnels (`dug`), worm `body` (head first), keys, tap `goal`, open card. `FOODS` = stops, `FINDS` =
-  fossils and coins, `isBed` = bedrock. `world` = 0 (coaster), 1 (worm) or 2 (cloud shop); `update`, `draw` and the keys
+  fossils and coins, `isBed` = bedrock. `world` = 0 (coaster), 1 (worm) or 2 (cloud); `update`, `draw` and the keys
   branch on it (`updateWorld`, `drawWorld`, `wormKey`, `tapWorld`).
 - **State**: `idx`/`target`, `riding`, `boost`, `springing`, `launched`, `wrapping`, `falling`, `world`.
 

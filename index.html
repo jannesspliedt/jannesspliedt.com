@@ -133,6 +133,24 @@
   .rows .when { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink-soft); padding-top: 2px; }
   .rows small { display: block; color: var(--ink-soft); font-size: 14px; }
   .rows small.hl { color: var(--ink); margin-top: 3px; }
+  .shop { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; }
+  .no-js .shopjs, .no-js .shop { display: none; }
+  .shop button {
+    -webkit-appearance: none; appearance: none; border-radius: 0; background: #fff; color: var(--ink); cursor: pointer;
+    border: 2px solid var(--ink); padding: 8px 4px 6px; font: 700 12px var(--mono); text-transform: uppercase; text-align: center;
+  }
+  .shop button canvas { display: block; margin: 0 auto 4px; width: 66px; height: 66px; image-rendering: pixelated; }
+  .shop button small { display: block; font-weight: 400; color: var(--ink-soft); margin-top: 2px; }
+  .shop button[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--ink); }
+  .shop button[aria-pressed="true"] small { color: var(--ink); font-weight: 700; }
+  .shop button.poor { opacity: .7; }
+  .shop button:focus-visible { background: #ececec; outline: none; }
+  #cheat {
+    position: fixed; left: 50%; top: 46%; transform: translateX(-50%); z-index: 6; width: min(280px, 80vw);
+    border: 3px solid var(--ink); border-radius: 0; background: #fff; color: var(--ink); padding: 8px 10px;
+    font: 700 16px var(--mono); text-align: center; outline: none;
+  }
+  #cheat[hidden] { display: none; }
   .rows small.hl::before { content: "★ "; }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .chips span { background: var(--paper-dark); border: 2px solid var(--trim); padding: 2px 10px; font-size: 14px; }
@@ -179,6 +197,7 @@
 <button class="px arrow" id="prev" aria-label="Back to the previous stop">◀</button>
 <button class="px arrow" id="next" aria-label="Ride to the next stop">▶</button>
 <button class="px" id="snd" aria-pressed="true" aria-label="Sound">♪ on</button>
+<input id="cheat" type="text" hidden maxlength="60" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="type here" aria-label="Type the sentence on the sign">
 <div id="hint">← → arrow keys</div>
 
 <main>
@@ -238,6 +257,17 @@
       <span>English – C2 (IELTS 8.5)</span>
       <span>Mandarin Chinese – beginner</span>
     </div>
+  </section>
+
+  <section class="card" id="shop" data-label="Shop">
+    <div class="stopno">Stop 03</div>
+    <h2>Shop</h2>
+    <p>Collect coins on the ride and down in the earth, then spend them here. <strong id="shop-coins"></strong></p>
+    <noscript><p>The shop needs JavaScript.</p></noscript>
+    <h3 class="shopjs">Riders</h3>
+    <div class="shop" id="shop-rider"></div>
+    <h3 class="shopjs">Carts</h3>
+    <div class="shop" id="shop-cart"></div>
   </section>
 
   <section class="card" id="impressum" data-label="Impressum" lang="de">
@@ -379,7 +409,9 @@
   loop(32); flat(12);
   ramp(40, -42); ramp(40, -16); flat(10);
   station();                                   // About me
-  ramp(170, -135); flat(12); ramp(120, -14); flat(24);
+  ramp(170, -135); flat(12); ramp(120, -14); flat(10);
+  station();                                   // Shop
+  flat(10);
   ramp(50, -55); const crest2Raw = raw.length - 1; ramp(50, -14); flat(10);
   station();                                   // Impressum
   flat(80); const barRaw = raw.length - 34;    // barrier with warning signs
@@ -414,6 +446,8 @@
   const gateS = Math.round(cum[gateRaw]), barS = Math.round(cum[barRaw]);
   const hop = (q, z) => { const u = (q - z[0]) / (z[1] - z[0]); return u > 0 && u < 1 ? (z[1] - z[0]) * u * (1 - u) : 0; };
   const labels = cards.map(c => c.dataset.label);
+  const SHOP_I = cards.findIndex(c => c.id === 'shop');
+  const SKY_S = stS.filter((q, k) => k !== SHOP_I);      // the day goes by from stop to stop; the shop sits inside the last leg
 
   /* ---------- terrain ---------- */
   const baseY = x => Math.round(4 * Math.sin(x / 90) + 3 * Math.sin(x / 37 + 1));
@@ -424,7 +458,7 @@
   const groundY = x => overHole(x) ? 1e6 : baseY(x);
   // the dinosaurs graze on the green hills in the background (positions in hill coordinates)
   const stX = marks.map(m => raw[m][0]);
-  const DINO_W = [stX[0] - 240, (stX[0] + stX[1]) / 2, (stX[1] + stX[2]) / 2, (stX[2] + stX[3]) / 2, stX[3] + 110];
+  const DINO_W = [stX[0] - 240, (stX[0] + stX[1]) / 2, (stX[1] + stX[2]) / 2, (stX[2] + stX[N - 1]) / 2, stX[N - 1] + 110];
 
   // layers of rock, from the surface down: [depth where it ends, three shades]
   const BANDS = [
@@ -536,7 +570,7 @@
   let falling = false, fx = 0, fy = 0, fvx = 0, fvy = 0, fang = 0, fallT = 0;   // free fall into the hole
   let barBroken = false, barParts = [];
   // the new world below the hole: world 0 = the coaster line, world 1 = where you land after the fall
-  let world = 0, wT = 0;
+  let world = 0, wT = 0, shopReady = false;
   let coins = 0, bump = 0;                       // the coin counter, shared by the ride and the worm world
   let hopOn = null, spd = 0, lpx = 0, lpy = 0;
   let airT = 0, groundT = 0, flying = false, flyT = 0;      // long enough in the air: propeller, up to the cloud shop
@@ -645,7 +679,7 @@
     b.className = 'px'; b.textContent = l; b.type = 'button';
     b.addEventListener('click', () => {
       if (world === 1) { navWorld(i); return; }   // in the worm world the nav points the way to the food
-      if (world === 2) { world = 0; target = i; arrive(); camInit = false; return; }   // out of the shop to that stop
+      if (world === 2) { leaveCloud(i); return; }   // off the cloud to that stop
       if (!wrapping && !springing && !launched && !flying) goTo(i);
     });
     nav.appendChild(b);
@@ -657,6 +691,7 @@
   function showCard(i) {
     cards.forEach((c, k) => c.classList.toggle('on', k === i));
     if (i >= 0) cards[i].scrollTop = 0;
+    if (i === SHOP_I && shopReady) renderShop();
     const cur = world === 1 ? W.open : world === 2 ? -1 : riding ? target : idx;
     navBtns.forEach((b, k) => b.setAttribute('aria-current', k === cur ? 'true' : 'false'));
     prevBtn.disabled = false;
@@ -701,7 +736,7 @@
     }
     audio();                                        // browsers only allow sound after a key press or click
     if (world === 1) { stepWorld(d); return; }
-    if (world === 2) { shopStep(d); return; }
+    if (world === 2) { if (!SH.leaving) SH.leaving = 0.001; return; }      // the arrows take you back down
     if (flying) return;
     if (springing === 1 && d < 0) { boost = true; return; }       // hurry towards the spring
     if (springing || launched) return;
@@ -725,7 +760,7 @@
   addEventListener('keydown', e => {
     if (e.altKey || e.ctrlKey || e.metaKey) return;
     if (world === 1 && wormKey(e, true)) return;
-    if (world === 2 && shopKey(e)) return;
+    if (world === 2) { cloudKey(e); return; }
     const k = e.key;
     if (k === 'ArrowRight' || k === 'd' || k === 'D') { e.preventDefault(); step(1); }
     else if (k === 'ArrowLeft' || k === 'a' || k === 'A') { e.preventDefault(); step(-1); }
@@ -736,7 +771,7 @@
   prevBtn.addEventListener('click', () => step(-1));
   cv.addEventListener('click', e => {
     if (world === 1) { if (performance.now() - joyEnd > 400) tapWorld(e); }
-    else if (world === 2) shopTap(e);
+    else if (world === 2) cheat.focus();
     else step(e.clientX < innerWidth / 2 ? -1 : 1);
   });
   // touch in the worm world: a joystick appears where the finger lands and steers in every direction
@@ -838,6 +873,7 @@
     apple:     ['...gG...', '....g...', '.rrrrrr.', 'rrrrwrrr', 'rrrrrwrr', 'rrrrrrrr', '.Rrrrrr.', '..RRRR..'],
     mushroom:  ['..rrrr..', '.rwrrwr.', 'rrrrrrrr', 'rwrrrrwr', '.RRRRRR.', '...cc...', '...cc...', '..cCCc..'],
     carrot:    ['..g..g..', '...gg...', '..oooo..', '..oOoo..', '...ooo..', '...oO...', '...oo...', '....o...'],
+    plum:      ['....k...', '...kg...', '..pppp..', '.pwpppp.', '.pppppp.', '.ppppPp.', '.pPPPPp.', '..PPPP..'],
     pear:      ['....b...', '...gg...', '...yy...', '..yyyy..', '.yyyyyy.', '.ywyyyy.', '.yyyyyY.', '..YYYY..'],
     ammonite:  ['..bbbb..', '.b....b.', 'b..bb..b', 'b.b..b.b', 'b.b.bb.b', 'b..b...b', '.b....b.', '..bbbb..'],
     trilobite: ['..bbbb..', '.bsbbsb.', '..bbbb..', '.bbbbbb.', '..bsbb..', '.bbbbbb.', '..bbbb..', '...bb...'],
@@ -858,7 +894,7 @@
     mosaic:    ['........', '.cucucu.', '.ucrcuc.', '.crcrcr.', '.ucrcuc.', '.cucucu.', '........', '........'],
     lamp:      ['........', '.......w', '......y.', '..tttt.t', '.tttttt.', 'tttTtttt', '.tttttt.', '..tttt..']
   };
-  const PAL = { g: '#3f8a3a', G: '#6cc35a', r: '#d8443c', R: '#a12e2a', w: '#ffffff', c: '#efe3c8', C: '#c9b894',
+  const PAL = { p: '#8a4fc0', P: '#5f3090', g: '#3f8a3a', G: '#6cc35a', r: '#d8443c', R: '#a12e2a', w: '#ffffff', c: '#efe3c8', C: '#c9b894',
     o: '#ee8a2a', O: '#c46518', y: '#c9d65a', Y: '#98a63c', b: '#e9dfc4', s: '#a8987a',
     m: '#c4c9d2', M: '#7f8590', k: '#3a2a1e', d: '#e8c040', D: '#a8801c', u: '#3f6fd0', t: '#c8693a', T: '#8f4424' };
   const COINS = { gold: ['#e8c040', '#fff1a0', '#a8801c'], silver: ['#c4c9d2', '#ffffff', '#7f8590'], bronze: ['#c27a3a', '#eaa468', '#81491f'] };
@@ -876,7 +912,8 @@
     { i: 0, c: 92, r: 20, spr: 'apple' },
     { i: 1, c: 24, r: 38, spr: 'mushroom' },
     { i: 2, c: 80, r: 66, spr: 'carrot' },
-    { i: 3, c: 34, r: 106, spr: 'pear' }
+    { i: SHOP_I, c: 60, r: 50, spr: 'plum' },
+    { i: N - 1, c: 34, r: 106, spr: 'pear' }
   ];
   const nearFood = (c, r, m) => FOODS.some(f => c >= f.c - m && c <= f.c + 1 + m && r >= f.r - m - 3 && r <= f.r + 1 + m);
   // finds: a few fossils and a good number of old coins for the museum
@@ -1360,13 +1397,12 @@
     { type: 'rider', name: 'JAY LAZER', price: 80, p: PEOPLE['JAY LAZER'] },
     { type: 'rider', name: 'MORGANE', price: 50, p: PEOPLE.MORGANE },
     { type: 'rider', name: 'JOOST', price: 50, p: PEOPLE.JOOST },
-    { type: 'rider', name: 'WOLF', price: 60, p: PEOPLE.WOLF },
-    { type: 'exit', name: 'BACK DOWN', price: 0 }
+    { type: 'rider', name: 'WOLF', price: 60, p: PEOPLE.WOLF }
   ];
   for (const it of ITEMS) it.owned = it.price === 0;
   const worn = { cart: ITEMS[0], rider: ITEMS.find(it => it.type === 'rider') };
   const OLD_WORM_SKINS = { 'worm:LIME': 40, 'worm:SKY': 40, 'worm:GOLDEN': 100 };      // no longer sold: anyone who bought one gets the coins back
-  const SH = { sel: 0, t: 0, leaving: 0, msg: '', msgT: 0, shake: 0 };
+  const SH = { t: 0, leaving: 0, msgT: 0 };
   // The coins and the skins are kept in the browser's local storage (see the Datenschutzerklärung). Nothing is sent anywhere.
   const SAVE_KEY = 'jannesspliedt-game';
   let saved = '';
@@ -1395,42 +1431,72 @@
   function wear(it) {
     worn[it.type] = it;
     cartIdle = makeCart(false, worn.cart.cols, worn.rider.p); cartFun = makeCart(true, worn.cart.cols, worn.rider.p);
-    for (const q of ITEMS) if (q.type === 'cart') q.img = makeCart(true, q.cols, worn.rider.p);     // the carts on offer show your rider
+    if (shopReady) renderShop();
   }
+  // the shop is a stop on the line: its card lists the riders and carts as buttons
+  const PHRASE = 'jannes ist der beste';
+  const cheat = document.getElementById('cheat');
+  const shopCoins = document.getElementById('shop-coins');
+  let shopBuilt = false, shopNote = null;
+  shopReady = true;
   wear(worn.cart);
   load();
-  function enterShop() {
+  function renderShop() {
+    if (!shopBuilt) {
+      shopBuilt = true;
+      for (const it of ITEMS) {
+        const b = document.createElement('button'); b.type = 'button';
+        const c = document.createElement('canvas'); c.width = c.height = 44;
+        const n = document.createElement('span'); n.textContent = it.name;
+        const st = document.createElement('small');
+        b.append(c, n, st); it.btn = b; it.cv = c; it.st = st;
+        b.addEventListener('click', () => {
+          if (!it.owned) {
+            if (coins < it.price) { shopNote = it; renderShop(); return; }
+            coins -= it.price; bump = 0.3; it.owned = true;
+          }
+          shopNote = null; wear(it); save();
+        });
+        document.getElementById('shop-' + it.type).appendChild(b);
+      }
+    }
+    shopCoins.textContent = 'You have ' + coins + (coins === 1 ? ' coin.' : ' coins.');
+    const main = ctx;
+    for (const it of ITEMS) {
+      const g = it.cv.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, 44, 44);
+      if (it.type === 'cart') g.drawImage(makeCart(true, it.cols, worn.rider.p), 6, 2, 32, 40);
+      else { ctx = g; drawPerson(it.p, 14, 8, 2); ctx = main; }
+      const on = worn[it.type] === it;
+      it.btn.setAttribute('aria-pressed', on);
+      it.btn.classList.toggle('poor', !it.owned && coins < it.price);
+      it.st.textContent = on ? 'wearing' : it.owned ? 'owned' : shopNote === it ? 'not enough coins' : it.price + ' coins';
+    }
+  }
+  // the hidden cloud: type the sentence on the sign and coins rain, as often as you like
+  function enterCloud() {
     world = 2; flying = false; airT = 0; hopOn = null; riding = false; boost = false; v = 0;
-    SH.sel = 0; SH.t = 0; SH.leaving = 0; SH.msg = ''; SH.msgT = 0; SH.shake = 0;
+    SH.t = 0; SH.leaving = 0; SH.msgT = 0;
     showCard(-1);
     hint.textContent = '';
+    cheat.value = ''; cheat.hidden = false;
+    if (!matchMedia('(pointer: coarse)').matches) cheat.focus();
   }
-  function shopStep(d) { if (!SH.leaving) { SH.sel = (SH.sel + d + ITEMS.length) % ITEMS.length; SH.msgT = 0; } }
-  function shopAct() {
-    if (SH.leaving) return;
-    const it = ITEMS[SH.sel], say = m => { SH.msg = m; SH.msgT = 1.6; };
-    if (it.type === 'exit') { SH.leaving = 0.001; return; }
-    if (!it.owned) {
-      if (coins < it.price) { say('NOT ENOUGH COINS'); SH.shake = 0.3; return; }
-      coins -= it.price; bump = 0.3; it.owned = true; wear(it); say('BOUGHT!');
-    } else if (worn[it.type] !== it) { wear(it); say('NOW WEARING'); }
+  function leaveCloud(i) {
+    cheat.hidden = true; cheat.blur();
+    world = 0; if (i >= 0) target = i; arrive(); camInit = false;
   }
-  function shopKey(e) {
+  cheat.addEventListener('input', () => {
+    if (world !== 2 || !cheat.value.toLowerCase().includes(PHRASE)) return;
+    cheat.value = ''; coins += 10; bump = 0.3; SH.msgT = 1.6; save();
+  });
+  function cloudKey(e) {
     const k = e.key;
-    if (k === 'Enter' || k === ' ' || k === 'ArrowUp' || k === 'w' || k === 'W') {
-      if (e.target.closest && e.target.closest('a, button, summary')) return false;
-      e.preventDefault(); shopAct(); return true;
-    }
-    if (k === 'Escape' || k === 'ArrowDown' || k === 's' || k === 'S') { e.preventDefault(); if (!SH.leaving) SH.leaving = 0.001; return true; }
-    return false;
+    if (k === 'Escape' || k === 'ArrowDown') { e.preventDefault(); if (!SH.leaving) SH.leaving = 0.001; }
+    else if (e.target !== cheat && k.length === 1) cheat.focus();      // just start typing
   }
-  function shopTap(e) {                          // only the big tile in the middle buys or wears; everything beside it browses
-    const rc = cv.getBoundingClientRect(), x = (e.clientX - rc.left) / SC - (VW >> 1);
-    if (x < -22) shopStep(-1); else if (x > 22) shopStep(1); else shopAct();
-  }
-  function updateShop(dt) {
-    SH.t += dt; SH.msgT = Math.max(0, SH.msgT - dt); SH.shake = Math.max(0, SH.shake - dt);
-    if (SH.leaving) { SH.leaving += dt; if (SH.leaving > 0.6) { world = 0; arrive(); camInit = false; } }
+  function updateCloud(dt) {
+    SH.t += dt; SH.msgT = Math.max(0, SH.msgT - dt);
+    if (SH.leaving) { SH.leaving += dt; if (SH.leaving > 0.6) leaveCloud(-1); }
   }
   function drawPerson(P, x, y, k) {              // a rider standing, 8x16 units of k pixels, top left at (x, y)
     const r = (col, a, b, w, h) => { ctx.fillStyle = col; ctx.fillRect(x + a * k, y + b * k, w * k, h * k); };
@@ -1475,24 +1541,7 @@
       } else { r(P.crown, 2, -1, 4, 1); px(JEWELS[0], 3, -1); px(JEWELS[1], 4, -1); px(P.crown, 2, -2); px(P.crown, 5, -2); }
     }
   }
-  function drawItem(it, x, y, big, t) {          // one framed tile of the shop, centred on (x, y)
-    const h = big ? 20 : 12;
-    ctx.fillStyle = '#1c1c1c'; ctx.fillRect(x - h - 1, y - h - 1, 2 * h + 2, 2 * h + 2);
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(x - h, y - h, 2 * h, 2 * h);
-    const bob = big ? Math.round(Math.sin(t * 3) * 1.2) : 0;
-    if (it.type === 'cart') { const k = big ? 2 : 1; ctx.drawImage(it.img, x - 8 * k, y - 10 * k + bob, 16 * k, 20 * k); }
-    else if (it.type === 'rider') { const k = big ? 2 : 1; drawPerson(it.p, x - 4 * k, y - 8 * k + bob + (it.p.crown ? k : 0), k); }
-    else {                                       // the way back down: an arrow
-      ctx.fillStyle = '#b23a48';
-      const k = big ? 2 : 1;
-      ctx.fillRect(x - k, y - 5 * k + bob, 2 * k, 6 * k);
-      for (let j = 0; j < 4; j++) ctx.fillRect(x - (4 - j) * k, y + (1 + j) * k + bob, 2 * (4 - j) * k, k);
-    }
-    if (it.owned && it.type !== 'exit' && worn[it.type] === it) {      // a tick on what you are wearing
-      ctx.fillStyle = '#3f8a3a'; ctx.fillRect(x + h - 6, y - h + 3, 1, 2); ctx.fillRect(x + h - 5, y - h + 4, 1, 2); ctx.fillRect(x + h - 4, y - h + 2, 1, 3); ctx.fillRect(x + h - 3, y - h + 1, 1, 2);
-    }
-  }
-  function drawShop(t) {
+  function drawCloud(t) {
     const cxm = VW >> 1, top = Math.round(56 / SC) + 6, y0 = Math.round(VHV * 0.74);
     for (let b = 0; b < 10; b++) {                 // bright sky far above the line
       ctx.fillStyle = rgb(mix(hex('#3f9be6'), hex('#c9ecff'), b / 9));
@@ -1503,56 +1552,39 @@
       const x = Math.round((hash(k, 111) * (VW + 80) + t * (3 + k)) % (VW + 80)) - 40, y = Math.round(top + hash(k, 112) * VHV * 0.4);
       puff(x, y, 6, '#e9f4ff'); puff(x + 8, y + 1, 5, '#e9f4ff'); puff(x - 8, y + 2, 4, '#e9f4ff');
     }
-    // the stall: posts, striped awning, counter
-    const sw = Math.min(VW - 10, 124), left = cxm - (sw >> 1), cy0 = y0 - 14;
-    ctx.fillStyle = '#6b4423'; ctx.fillRect(left + 2, top + 8, 3, y0 - top); ctx.fillRect(left + sw - 5, top + 8, 3, y0 - top);
-    for (let x = 0; x < sw; x += 8) {
-      const w = Math.min(8, sw - x);
-      ctx.fillStyle = (x >> 3) % 2 ? '#ffffff' : '#d8443c'; ctx.fillRect(left + x, top, w, 9); ctx.fillRect(left + x + 1, top + 9, Math.max(0, w - 2), 2);
-      ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(left + x, top + 7, w, 2);
-    }
-    ctx.fillStyle = '#1c1c1c'; ctx.fillRect(left, top - 1, sw, 1);
-    // the things for sale: the chosen one big in the middle, its neighbours small beside it
-    const n = ITEMS.length, it = ITEMS[SH.sel], iy = Math.round((top + 11 + cy0) / 2) + 1;
-    const sh = SH.shake > 0 ? Math.round(Math.sin(t * 60) * 2) : 0;
-    ctx.globalAlpha = 0.6;
-    drawItem(ITEMS[(SH.sel + n - 1) % n], cxm - 38, iy + 3, false, t); drawItem(ITEMS[(SH.sel + 1) % n], cxm + 38, iy + 3, false, t);
-    ctx.globalAlpha = 1;
-    drawItem(it, cxm + sh, iy, true, t);
-    const label = (it.type === 'exit' ? '' : it.type.toUpperCase() + ' - ') + it.name;
-    drawText(label, cxm - (textW(label) >> 1), iy - 29, '#1c1c1c');
-    for (let k = 0; k < n; k++) {                  // one dot per thing on offer, so you see how much there is
-      ctx.fillStyle = k === SH.sel ? '#1c1c1c' : ITEMS[k].owned ? '#3f8a3a' : '#ffffff';
-      ctx.fillRect(cxm - n * 2 + k * 4, iy - 35, k === SH.sel ? 3 : 2, k === SH.sel ? 3 : 2);
-    }
-    const status = it.type === 'exit' ? 'LEAVE THE SHOP' : !it.owned ? it.price + ' COINS' : worn[it.type] === it ? 'WEARING' : 'OWNED';
-    // the counter with the sign
-    ctx.fillStyle = '#8a5a2b'; ctx.fillRect(left - 2, cy0, sw + 4, 16);
-    ctx.fillStyle = '#c48a4a'; ctx.fillRect(left - 3, cy0 - 2, sw + 6, 3);
-    ctx.fillStyle = '#6b4423'; for (let x = left + 10; x < left + sw; x += 14) ctx.fillRect(x, cy0 + 1, 1, 15);
-    const stw = textW(status) + 8;
-    ctx.fillStyle = '#3b2414'; ctx.fillRect(cxm - (stw >> 1) - 1, cy0 + 3, stw + 2, 11);
-    ctx.fillStyle = !it.owned && it.type !== 'exit' && coins < it.price ? '#7d2533' : '#3f6b3a'; ctx.fillRect(cxm - (stw >> 1), cy0 + 4, stw, 9);
-    drawText(status, cxm - (stw >> 1) + 4, cy0 + 6, '#fff1c9');
+    // a wooden sign with the sentence; the letters you have typed so far light up
+    const words = PHRASE.toUpperCase(), sw = textW(words) + 12, left = cxm - (sw >> 1), sy = top + 10;
+    ctx.fillStyle = '#6b4423'; ctx.fillRect(left + 6, sy + 20, 3, y0 - sy); ctx.fillRect(left + sw - 9, sy + 20, 3, y0 - sy);
+    ctx.fillStyle = '#3b2414'; ctx.fillRect(left - 1, sy - 1, sw + 2, 33);
+    ctx.fillStyle = '#8a5a2b'; ctx.fillRect(left, sy, sw, 31);
+    ctx.fillStyle = '#a8703a'; ctx.fillRect(left, sy, sw, 1);
+    drawText('TYPE', cxm - (textW('TYPE') >> 1), sy + 4, '#fff1c9');
+    const v = cheat.value.toLowerCase();
+    let done = 0;
+    for (let n = Math.min(v.length, PHRASE.length); n > 0; n--) if (v.endsWith(PHRASE.slice(0, n))) { done = n; break; }
+    drawText(words, left + 6, sy + 13, '#fff1c9');
+    if (done) drawText(words.slice(0, done), left + 6, sy + 13, '#f6d24a');
+    const prize = 'FOR 10 COINS', pw = textW(prize);
+    drawText(prize, cxm - (pw >> 1), sy + 22, '#fff1c9');
     // the cloud everything stands on
     for (let x = -6; x < VW + 12; x += 11) puff(x, y0 + 13 + Math.round(3 * Math.sin(x * 0.7)), 10, '#ffffff');
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, y0 + 14, VW, VH - y0);
     for (let x = 4; x < VW; x += 23) puff(x, y0 + 30 + Math.round(4 * Math.sin(x)), 5, '#e4eef8');
     // your cart with its propeller, parked in front
     const px = Math.max(12, left + 12), py = y0 + 24, f = (t * 20 | 0) % 4, bw = [7, 4, 1, 4][f];
-    ctx.drawImage(cartIdle, px - 8, py - 20);
+    ctx.drawImage(SH.msgT > 0 ? cartFun : cartIdle, px - 8, py - 20);
     ctx.fillStyle = '#55556a'; ctx.fillRect(px, py - 21, 1, 3);
     ctx.fillStyle = '#c4c9d2'; ctx.fillRect(px - bw, py - 22, 2 * bw + 1, 1);
-    // browse arrows and what to press
-    const blink = Math.sin(t * 5) > 0 ? 1 : 0;
-    ctx.fillStyle = '#1c1c1c';
-    for (let j = 0; j < 4; j++) { ctx.fillRect(cxm - 56 - blink + j, iy + 3 - j, 1, 2 * j + 1); ctx.fillRect(cxm + 56 + blink - j, iy + 3 - j, 1, 2 * j + 1); }
-    if (SH.msgT > 0) {
-      const w = textW(SH.msg) + 6, mx = cxm - (w >> 1), my = iy + 24;
+    if (SH.msgT > 0) {                             // coins rain down
+      const msg = '+10 COINS', w = textW(msg) + 6, mx = cxm - (w >> 1), my = y0 - 12;
       ctx.fillStyle = '#1c1c1c'; ctx.fillRect(mx - 1, my - 1, w + 2, 11);
-      drawText(SH.msg, mx + 3, my + 2, '#f6d24a');
+      drawText(msg, mx + 3, my + 2, '#f6d24a');
+      for (let k = 0; k < 10; k++) {
+        const u = 1.6 - SH.msgT + hash(k, 141) * 0.3, x = cxm + Math.round((hash(k, 142) - 0.5) * 90), y = sy + 34 + Math.round(u * u * 60);
+        if (y < y0 + 10) { ctx.fillStyle = '#a8801c'; ctx.fillRect(x - 1, y - 1, 4, 4); ctx.fillStyle = '#e8c040'; ctx.fillRect(x, y, 2, 2); }
+      }
     }
-    const how = matchMedia('(pointer: coarse)').matches ? 'TAP - BUY OR WEAR' : 'ENTER - BUY OR WEAR';
+    const how = matchMedia('(pointer: coarse)').matches ? 'ARROWS - BACK DOWN' : 'ARROW DOWN - BACK DOWN';
     drawText(how, cxm - (textW(how) >> 1), VHV - Math.round(50 / SC) - 21, '#7d8ea6');
     drawCounter();
     const fade = Math.max(clamp(1 - SH.t / 0.6, 0, 1), clamp(SH.leaving / 0.6, 0, 1));
@@ -1562,7 +1594,7 @@
   /* ---------- simulation ---------- */
   function update(dt) {
     if (world === 1) { updateWorld(dt); return; }
-    if (world === 2) { updateShop(dt); return; }
+    if (world === 2) { updateCloud(dt); return; }
     for (const q of barParts) { q.vy += 320 * dt; q.x += q.vx * dt; q.y += q.vy * dt; q.a += q.va * dt; }
     if (!riding) return;
     tRide += dt;
@@ -1613,7 +1645,7 @@
       fvy = Math.max(-190, fvy - 150 * dt);
       fy += fvy * dt; fx += Math.sin(flyT * 2.2) * 8 * dt;
       v = -fvy;
-      if (flyT > 3.4) enterShop();
+      if (flyT > 3.4) enterCloud();
       return;
     }
     const rem = Math.abs(goal - s), dir = goal > s ? 1 : -1;
@@ -2147,7 +2179,7 @@
 
   function draw(t, dt) {
     if (world === 1) { drawWorld(t); return; }
-    if (world === 2) { drawShop(t); return; }
+    if (world === 2) { drawCloud(t); return; }
     const i = clamp(Math.round(s), 0, L);
     const air = falling || flying;
     const px = air ? fx : X[i], py = air ? fy : Y[i];
@@ -2164,15 +2196,16 @@
     const cy = Math.round(camY) + (screaming ? Math.round(Math.sin(t * 47) * 1.2) : 0);
 
     // which part of the day are we in?
-    let p = N - 1;
+    const NS = SKY_S.length;
+    let p = NS - 1;
     let secF = -1;
-    for (let k = 0; k < N - 1; k++) if (s < stS[k + 1]) {
-      const f = clamp((s - stS[k]) / (stS[k + 1] - stS[k]), 0, 1);
-      p = k + (k === N - 2 ? Math.min(1, f * 2.6) : f);          // night falls early on the last leg
-      if (k === N - 2) secF = f;
+    for (let k = 0; k < NS - 1; k++) if (s < SKY_S[k + 1]) {
+      const f = clamp((s - SKY_S[k]) / (SKY_S[k + 1] - SKY_S[k]), 0, 1);
+      p = k + (k === NS - 2 ? Math.min(1, f * 2.6) : f);          // night falls early on the last leg
+      if (k === NS - 2) secF = f;
       break;
     }
-    if (s < stS[0]) p = 0;
+    if (s < SKY_S[0]) p = 0;
 
     const sky = drawSky(p, t);
     const groundScreen = baseY(px) - cy;
@@ -2307,6 +2340,9 @@
       if (wx < x0 - 60 || wx > x1 + 60) return;
       const label = labels[k].toUpperCase(), w = textW(label) + 8;
       const sx = wx - cx - (w >> 1), sy = wy - cy - 50;
+      if (k === SHOP_I) for (let q = -14; q < w + 14; q += 6) {      // the shop has a striped awning over its sign
+        ctx.fillStyle = ((q + 14) / 6) % 2 ? '#ffffff' : '#d8443c'; ctx.fillRect(sx + q, sy - 10, 6, 7); ctx.fillRect(sx + q + 1, sy - 3, 4, 2);
+      }
       ctx.fillStyle = '#6b4220'; ctx.fillRect(sx + 2, sy + 9, 2, 44); ctx.fillRect(sx + w - 4, sy + 9, 2, 44);
       ctx.fillStyle = '#3b2414'; ctx.fillRect(sx - 1, sy - 1, w + 2, 11);
       ctx.fillStyle = '#8a5a2b'; ctx.fillRect(sx, sy, w, 9);
