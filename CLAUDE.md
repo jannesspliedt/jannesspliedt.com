@@ -100,8 +100,8 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
   (bronze/silver/gold with the number, own design; Jannes wanted it like coin trails in Hill Climb Racing).
   The cart collects them in the air; they come back at every stop (`arrive`). Counter shows once coins > 0.
 
-- **Propeller and cloud shop**: jumping back and forth keeps the cart in the air; after more than 3 s airborne
-  (`airT`) a propeller appears, the cart flies up (`flying`) and lands on a hidden cloud (`world` = 2,
+- **Propeller and cloud shop**: turning round in the air and back again (once back and forth, `airFlips` >= 2; Jannes made it this easy
+  on 2026-11-14; 3 s airborne, `airT`, also still works) makes a propeller appear, the cart flies up (`flying`) and lands on a hidden cloud (`world` = 2,
   `enterCloud`, `drawCloud`). The shop used to be up there; since 2026-11-14 it is a normal stop on the line between
   About me and Impressum (card `#shop`, `SHOP_I`; its leg from About me has no jump, the sky treats About me →
   Impressum as one leg via `SKY_S`; in the worm world its food is a plum). On the cloud a sign says to type
