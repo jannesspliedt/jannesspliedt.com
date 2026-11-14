@@ -105,7 +105,7 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
   `enterCloud`, `drawCloud`). The shop used to be up there; since 2026-11-14 it is a normal stop on the line between
   About me and Impressum (card `#shop`, `SHOP_I`; its leg from About me has no jump, the sky treats About me →
   Impressum as one leg via `SKY_S`; in the worm world its food is a plum). On the cloud a sign says to type
-  "jannes ist der beste" into the text field `#cheat`: every time gives 10 coins, without limit (Jannes wanted
+  "jannes ist der beste" into the text field `#cheat` and press Enter (`cheatEnter`): every time gives 10 coins, without limit (Jannes wanted
   exactly that). Typing something unkind about him ("jannes" plus a word from `UNKIND`) and pressing Enter takes away all coins and all bought skins.
   ↓/Esc, ◀ ▶ or a nav button lead back down. The typed text is not stored anywhere.
   `ITEMS`: rider skins and cart skins bought with `coins`. Riders are defined in `PEOPLE` (CLASSIC; MORGANE: green scarf, old brown leather jacket, black
