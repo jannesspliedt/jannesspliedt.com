@@ -478,7 +478,9 @@
     CLASSIC: { skin: '#f1c49b', hair: '#3a2a1a', top: '#3fa66b', topDark: '#2f8454', legs: '#33415c', legsDark: '#27324a' },
     MORGANE: { skin: '#f1c49b', hair: '#3a2a1a', top: '#7a4a2a', topDark: '#5c3519', legs: '#1c1c22', legsDark: '#0e0e12',
       scarf: '#3f8a3a', scarfLight: '#5aa84a', chain: '#d4d8e0' },            // green scarf, old brown leather jacket, black trousers, small silver spiral necklace
-    JOOST: { beer: true, skin: '#ffffff', hair: '#e6e6ee', top: '#f0a820', topDark: '#d48c12', legs: '#f0a820', legsDark: '#d48c12' },      // no person at all: one giant beer (foam head, amber body)
+    WOLF: { wolf: true, skin: '#9aa0aa', hair: '#6a707c', top: '#e8e2d2', topDark: '#c9c2b0', legs: '#33415c', legsDark: '#27324a',
+      flag: '#3f8fe6', scream: 'GOOGLE EARTH' },                               // a wolf in a jumper with a flag of the world on it (own design: blue with a globe)
+    JOOST: { beer: true, scream: 'APRES SKI', skin: '#ffffff', hair: '#e6e6ee', top: '#f0a820', topDark: '#d48c12', legs: '#f0a820', legsDark: '#d48c12' },      // no person at all: one giant beer (foam head, amber body)
     'JAY LAZER': { skin: '#f1c49b', hair: '#3a2a1a', top: '#8a8d94', topDark: '#6e7178', legs: '#3f6fd0', legsDark: '#2f55a8',
       crown: '#f6c21a' }                                                       // grey jumper, blue jeans, a crown with many jewels
   };
@@ -500,9 +502,11 @@
     r(P.topDark, 6, 5, 1, 4);
     if (P.scarf) { r(P.scarf, 6, 4, 4, 1); r(P.scarfLight, 7, 4, 1, 1); r(P.scarf, 6, 5, 1, 2); }
     if (P.chain) { r(P.chain, 8, 5, 1, 2); }
+    if (P.flag) { r(P.flag, 7, 5, 3, 2); r('#5fc070', 8, 5, 1, 1); r('#ffffff', 8, 6, 1, 1); }
     r(P.skin, 6, 0, 4, 4);                          // head
     r(P.hair, 6, 0, 4, 1); r(P.hair, 5, 0, 1, 3);   // hair
-    r('#1c1c22', 9, 2, 1, 1);                       // eye
+    r('#1c1c22', 9, P.wolf ? 1 : 2, 1, 1);          // eye
+    if (P.wolf) { r(P.hair, 6, -1, 1, 1); r(P.hair, 9, -1, 1, 1); r('#c4c9d2', 10, 2, 2, 2); r('#1c1c22', 11, 2, 1, 1); r('#c4c9d2', 8, 3, 2, 1); }      // ears, snout, nose
     if (handsUp) { r(P.skin, 4, 1, 1, 4); r(P.skin, 11, 1, 1, 4); r(P.top, 5, 5, 1, 1); r(P.top, 10, 5, 1, 1); }
     else { r(P.top, 10, 5, 2, 1); r(P.skin, 12, 5, 1, 1); }
     }
@@ -1309,6 +1313,7 @@
       ctx.fillRect(x, y, WC, WC);
       if (k === 1 && WP.scarf) { ctx.fillStyle = WP.scarfLight; ctx.fillRect(x + 1, y + 1, 2, 1); }
       if (k === 2 && WP.chain) { ctx.fillStyle = WP.chain; ctx.fillRect(x + 1, y + 1, 2, 2); ctx.fillStyle = WP.top; ctx.fillRect(x + 2, y + 2, 1, 1); }
+      if (k === 2 && WP.flag) { ctx.fillStyle = WP.flag; ctx.fillRect(x, y + 1, 4, 2); ctx.fillStyle = '#5fc070'; ctx.fillRect(x + 1, y + 1, 2, 1); ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 1, y + 2, 2, 1); }
       if (WP.beer && k > 0 && k % 3 === 2) { ctx.fillStyle = '#f8c850'; ctx.fillRect(x + 1, y + 1, 1, 1); }      // bubbles in the beer
     }
     {
@@ -1358,6 +1363,7 @@
     { type: 'rider', name: 'JAY LAZER', price: 80, p: PEOPLE['JAY LAZER'] },
     { type: 'rider', name: 'MORGANE', price: 50, p: PEOPLE.MORGANE },
     { type: 'rider', name: 'JOOST', price: 50, p: PEOPLE.JOOST },
+    { type: 'rider', name: 'WOLF', price: 60, p: PEOPLE.WOLF },
     { type: 'exit', name: 'BACK DOWN', price: 0 }
   ];
   for (const it of ITEMS) it.owned = it.price === 0;
@@ -1440,7 +1446,8 @@
       if (k > 1) for (const [a, b] of [[7, 22], [9, 25], [8, 17], [11, 21]]) { ctx.fillStyle = '#f8c850'; ctx.fillRect(x + a, y + b, 1, 1); }
       return;
     }
-    r(P.skin, 2, 0, 4, 4); r(P.hair, 2, 0, 4, 1); r(P.hair, 1, 0, 1, 3); r('#1c1c22', 5, 2, 1, 1);
+    r(P.skin, 2, 0, 4, 4); r(P.hair, 2, 0, 4, 1); r(P.hair, 1, 0, 1, 3); r('#1c1c22', 5, P.wolf ? 1 : 2, 1, 1);
+    if (P.wolf) { r(P.hair, 2, -1, 1, 1); r(P.hair, 5, -1, 1, 1); r('#c4c9d2', 6, 2, 2, 2); r('#1c1c22', 7, 2, 1, 1); r('#c4c9d2', 4, 3, 2, 1); r(P.skin, -1, 9, 1, 4); r(P.hair, -1, 12, 1, 1); }      // ears, snout, nose, tail
     r(P.top, 1, 4, 6, 6); r(P.topDark, 0, 5, 1, 5); r(P.topDark, 7, 5, 1, 5); r(P.topDark, 1, 9, 6, 1);
     r(P.skin, 0, 10, 1, 1); r(P.skin, 7, 10, 1, 1);
     r(P.legs, 1, 10, 6, 5); r(P.legsDark, 3, 11, 2, 4); r('#22222a', 1, 15, 2, 1); r('#22222a', 5, 15, 2, 1);
@@ -1453,6 +1460,14 @@
         px(P.chain, 7, 14);
       }
       else r(P.chain, 4, 6, 1, 1);
+    }
+    if (P.flag) {                                // the flag of the world on the jumper: blue with a globe
+      if (k > 1) {
+        ctx.fillStyle = P.flag; ctx.fillRect(x + 4, y + 11, 8, 6);
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(x + 6, y + 12, 4, 4); ctx.fillRect(x + 7, y + 11, 2, 6); ctx.fillRect(x + 5, y + 13, 6, 2);
+        for (const [a, b] of [[6, 13], [7, 12], [7, 13], [9, 14], [8, 15], [9, 15]]) px('#5fc070', a, b);
+        for (const [a, b] of [[8, 13], [7, 14], [10, 13]]) px('#3f8fe6', a, b);
+      } else { r(P.flag, 3, 6, 3, 2); r('#5fc070', 4, 6, 1, 1); r('#ffffff', 4, 7, 1, 1); }
     }
     if (P.crown) {                               // a crown full of jewels
       if (k > 1) {
@@ -2368,7 +2383,8 @@
         const wy = ((hash(k, 32) * VH - t * 300 * (0.6 + hash(k, 33))) % VH + VH) % VH;
         ctx.fillRect((hash(k, 31) * VW) | 0, wy | 0, 1, 6);
       }
-      const txt = 'A'.repeat(5 + ((t * 6 | 0) % 4)) + 'H!', w = textW(txt) + 6;
+      const yell = worn.rider.p.scream;              // some riders have a scream of their own
+      const txt = yell ? yell + '!'.repeat(1 + ((t * 6 | 0) % 3)) : 'A'.repeat(5 + ((t * 6 | 0) % 4)) + 'H!', w = textW(txt) + 6;
       const bxx = clamp(carX - (w >> 1) + Math.round(Math.sin(t * 40)), 2, VW - w - 2);
       const byy = Math.max(2, carY - 46 + Math.round(Math.cos(t * 33)));
       ctx.fillStyle = '#1c1c1c'; ctx.fillRect(bxx - 1, byy - 1, w + 2, 11);
