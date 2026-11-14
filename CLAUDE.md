@@ -101,8 +101,12 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
 
 - **Propeller and cloud shop**: jumping back and forth keeps the cart in the air; after more than 3 s airborne
   (`airT`) a propeller appears, the cart flies up (`flying`) and lands on a hidden cloud with a skin shop
-  (`world` = 2, section "the hidden cloud"). `ITEMS`: cart skins and worm skins bought with `coins`, plus
-  "BACK DOWN". ← → browse, Enter/Space/↑ or a tap in the middle buys or wears, ↓/Esc leaves; the nav
+  (`world` = 2, section "the hidden cloud"). `ITEMS`: cart skins and rider skins bought with `coins`, plus
+  "BACK DOWN". Riders are defined in `PEOPLE` (CLASSIC; MORGANE: green scarf, old brown leather jacket, black
+  trousers, small spiral necklace; JOOST: not a person but one giant beer; JAY LAZER: brown jumper, blue jeans,
+  crown with many jewels) and drawn by `makeCart` (in the cart) and `drawPerson` (shop tile). There are no worm
+  skins any more (Jannes, 2026-11-14): the worm takes the look of the worn rider (`worn.rider.p`). Old saves
+  with a worm skin get the coins back once (`OLD_WORM_SKINS`). ← → browse, Enter/Space/↑ or a tap in the middle buys or wears, ↓/Esc leaves; the nav
   buttons leave to that stop. Coins, bought skins and the worn skins are kept
   in localStorage (`SAVE_KEY`, `save`/`load`, Jannes chose this on 2026-11-14); the Datenschutzerklärung has
   a paragraph "Spielstand im Browser" for it. If more is ever stored, update that paragraph in the same commit.
