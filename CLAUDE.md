@@ -98,6 +98,13 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
   (bronze/silver/gold with the number, own design; Jannes wanted it like coin trails in Hill Climb Racing).
   The cart collects them in the air; they come back at every stop (`arrive`). Counter shows once coins > 0.
 
+- **Propeller and cloud shop**: jumping back and forth keeps the cart in the air; after more than 3 s airborne
+  (`airT`) a propeller appears, the cart flies up (`flying`) and lands on a hidden cloud with a skin shop
+  (`world` = 2, section "the hidden cloud"). `ITEMS`: cart skins and worm skins bought with `coins`, plus
+  "BACK DOWN". ← → browse, Enter/Space/↑ or a tap in the middle buys or wears, ↓/Esc leaves; the nav
+  buttons leave to that stop. Purchases live in memory only (no localStorage: the Datenschutzerklärung says
+  nothing is stored; storing them would need an update there).
+
 ## How the script is organised (inside `index.html`)
 
 - **Track**: built from `flat`, `ramp`, `loop`, `station`, then resampled to 1 px arc length
@@ -113,7 +120,7 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
   crystals, gems in the deep stone, creatures (`drawCritters`, `drawLurker`, `drawBeast`).
 - **Worm world**: section "after the fall: a worm in the earth". Grid of 4 px cells (`WC`, `WCOLS`, `WROWS`),
   `W` holds tunnels (`dug`), worm `body` (head first), keys, tap `goal`, open card. `FOODS` = stops, `FINDS` =
-  fossils and coins, `isBed` = bedrock. `world` = 0 (coaster) or 1 (worm); `update`, `draw` and the keys
+  fossils and coins, `isBed` = bedrock. `world` = 0 (coaster), 1 (worm) or 2 (cloud shop); `update`, `draw` and the keys
   branch on it (`updateWorld`, `drawWorld`, `wormKey`, `tapWorld`).
 - **State**: `idx`/`target`, `riding`, `boost`, `springing`, `launched`, `wrapping`, `falling`, `world`.
 
