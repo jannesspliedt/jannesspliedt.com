@@ -132,6 +132,8 @@
   .rows li:last-child { border-bottom: none; }
   .rows .when { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--ink-soft); padding-top: 2px; }
   .rows small { display: block; color: var(--ink-soft); font-size: 14px; }
+  .rows small.hl { color: var(--ink); margin-top: 3px; }
+  .rows small.hl::before { content: "★ "; }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .chips span { background: var(--paper-dark); border: 2px solid var(--trim); padding: 2px 10px; font-size: 14px; }
   .postlist { list-style: none; padding: 0 !important; margin: 10px 0 0 !important; border-top: 3px dashed var(--trim); }
@@ -203,17 +205,21 @@
       <li>
         <span class="when">10.2024 – 03.2028</span>
         <span><strong>RWTH Aachen University</strong>
-          <small>B.Sc. Mechanical Engineering and Business Administration · GPA 1.5 (German scale, 1.0 = best)</small></span>
+          <small>B.Sc. Mechanical Engineering and Business Administration · GPA 1.5 (German scale, 1.0 = best)</small>
+          <small class="hl">Dean's List · Top 5% of the cohort (second semester)</small>
+          <small class="hl">Deutschlandstipendium 2025/26 · National merit scholarship</small></span>
       </li>
       <li>
         <span class="when">08.2026 – 12.2026</span>
         <span><strong>National University of Singapore (NUS)</strong>
-          <small>Exchange Semester</small></span>
+          <small>Exchange Semester</small>
+          <small class="hl">PROMOS Scholarship (DAAD) · For the exchange semester</small></span>
       </li>
       <li>
         <span class="when">09.2016 – 06.2024</span>
         <span><strong>Klaus-Harms-Schule, Kappeln</strong>
-          <small>Abitur · GPA 1.0</small></span>
+          <small>Abitur · GPA 1.0</small>
+          <small class="hl">Mathematics Abitur Award · Outstanding performance in the final exams</small></span>
       </li>
     </ul>
 
@@ -224,15 +230,6 @@
         <span><strong>FFG Flensburger Fahrzeugbau Gesellschaft mbH</strong>
           <small>Technical Internship (Industrial Engineering) · Machining (manual and CNC), sheet metal forming, welding and cutting</small></span>
       </li>
-    </ul>
-
-    <h3>Highlights</h3>
-    <ul class="rows">
-      <li><span class="when">Award</span><span>Dean's List, RWTH Aachen University <small>Top 5% of the cohort (second semester)</small></span></li>
-      <li><span class="when">Scholarship</span><span>Deutschlandstipendium 2025/26 <small>National merit scholarship</small></span></li>
-      <li><span class="when">Scholarship</span><span>PROMOS Scholarship (DAAD) <small>For the exchange semester at NUS</small></span></li>
-      <li><span class="when">Award</span><span>Mathematics Abitur Award <small>Outstanding performance in the final exams</small></span></li>
-      <li><span class="when">Since 11.2025</span><span>Aachen Investment Club <small>Member of the portfolio management team</small></span></li>
     </ul>
 
     <h3>Languages</h3>

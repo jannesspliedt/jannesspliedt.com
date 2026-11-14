@@ -38,7 +38,7 @@ There is nothing to build: the repository root is served as is.
 |---|---|---|
 | Start | `start` | Only the line "Press → to ride to the next stop and ← to go back." |
 | Odds & Ends | `odds-and-ends` | Blog. List of posts, click opens one. Empty for now. |
-| About me | `about` | Only Education, Work Experience, Highlights, Languages – no prose, no contact block. Institution in bold, degree/role in the small line. Taken from his CV. |
+| About me | `about` | Only Education, Work Experience, Languages – no prose, no contact block. Awards and scholarships are listed under the education they belong to (`small.hl`, with a star); no Aachen Investment Club (Jannes, 2026-11-14). Institution in bold, degree/role in the small line. Taken from his CV. |
 | Impressum | `impressum` | Impressum and Datenschutzerklärung (German). |
 
 Deep links: `#about`, `#impressum`, `#odds-and-ends/<post-slug>`.
