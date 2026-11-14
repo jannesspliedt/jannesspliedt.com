@@ -103,8 +103,10 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
   (`airT`) a propeller appears, the cart flies up (`flying`) and lands on a hidden cloud with a skin shop
   (`world` = 2, section "the hidden cloud"). `ITEMS`: cart skins and rider skins bought with `coins`, plus
   "BACK DOWN". Riders are defined in `PEOPLE` (CLASSIC; MORGANE: green scarf, old brown leather jacket, black
-  trousers, small spiral necklace; JOOST: not a person but one giant beer; JAY LAZER: brown jumper, blue jeans,
+  trousers, small silver spiral necklace; JOOST: not a person but one giant beer; JAY LAZER, that is Jannes himself: grey jumper, blue jeans,
   crown with many jewels) and drawn by `makeCart` (in the cart) and `drawPerson` (shop tile). There are no worm
+  Jay Lazer is the first rider on offer; while he is worn, changing direction 7 times within 2.5 s (`flips` in
+  `step`) shoots laser beams from his eyes for 2.5 s (`lazT`, drawn with the cart). There are no worm
   skins any more (Jannes, 2026-11-14): the worm takes the look of the worn rider (`worn.rider.p`). Old saves
   with a worm skin get the coins back once (`OLD_WORM_SKINS`). ← → browse, Enter/Space/↑ or a tap in the middle buys or wears, ↓/Esc leaves; the nav
   buttons leave to that stop. Coins, bought skins and the worn skins are kept
