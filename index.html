@@ -1485,9 +1485,20 @@
     cheat.hidden = true; cheat.blur();
     world = 0; if (i >= 0) target = i; arrive(); camInit = false;
   }
+  // ... but anything unkind about Jannes costs every coin and every skin
+  const UNKIND = ['nicht der beste', 'schlecht', 'doof', 'dumm', 'blöd', 'bloed', 'scheiße', 'scheisse', 'kacke', 'mies', 'hässlich', 'haesslich',
+    'nervig', 'langweilig', 'verlierer', 'versager', 'idiot', 'loser', 'worst', 'bad', 'stupid', 'dumb', 'ugly', 'lame', 'sucks', 'boring', 'not the best'];
   cheat.addEventListener('input', () => {
-    if (world !== 2 || !cheat.value.toLowerCase().includes(PHRASE)) return;
-    cheat.value = ''; coins += 10; bump = 0.3; SH.msgT = 1.6; save();
+    if (world !== 2) return;
+    const v = cheat.value.toLowerCase();
+    if (v.includes('jannes') && UNKIND.some(w => v.includes(w))) {
+      cheat.value = ''; coins = 0; SH.msgT = 2.4; SH.bad = true;
+      for (const it of ITEMS) it.owned = it.price === 0;
+      wear(ITEMS.find(it => it.type === 'cart' && it.price === 0)); wear(ITEMS.find(it => it.type === 'rider' && it.price === 0)); save();
+      return;
+    }
+    if (!v.includes(PHRASE)) return;
+    cheat.value = ''; coins += 10; bump = 0.3; SH.msgT = 1.6; SH.bad = false; save();
   });
   function cloudKey(e) {
     const k = e.key;
@@ -1572,14 +1583,15 @@
     for (let x = 4; x < VW; x += 23) puff(x, y0 + 30 + Math.round(4 * Math.sin(x)), 5, '#e4eef8');
     // your cart with its propeller, parked in front
     const px = Math.max(12, left + 12), py = y0 + 24, f = (t * 20 | 0) % 4, bw = [7, 4, 1, 4][f];
-    ctx.drawImage(SH.msgT > 0 ? cartFun : cartIdle, px - 8, py - 20);
+    ctx.drawImage(SH.msgT > 0 && !SH.bad ? cartFun : cartIdle, px - 8, py - 20);
     ctx.fillStyle = '#55556a'; ctx.fillRect(px, py - 21, 1, 3);
     ctx.fillStyle = '#c4c9d2'; ctx.fillRect(px - bw, py - 22, 2 * bw + 1, 1);
     if (SH.msgT > 0) {                             // coins rain down
-      const msg = '+10 COINS', w = textW(msg) + 6, mx = cxm - (w >> 1), my = y0 - 12;
+      const msg = SH.bad ? 'ALL COINS AND SKINS GONE!' : '+10 COINS', w = textW(msg) + 6, mx = cxm - (w >> 1), my = y0 - 12;
+      if (SH.bad) { ctx.fillStyle = `rgba(216,68,60,${Math.min(0.5, SH.msgT * 0.3)})`; ctx.fillRect(0, 0, VW, VH); }
       ctx.fillStyle = '#1c1c1c'; ctx.fillRect(mx - 1, my - 1, w + 2, 11);
-      drawText(msg, mx + 3, my + 2, '#f6d24a');
-      for (let k = 0; k < 10; k++) {
+      drawText(msg, mx + 3, my + 2, SH.bad ? '#ff6a6a' : '#f6d24a');
+      if (!SH.bad) for (let k = 0; k < 10; k++) {
         const u = 1.6 - SH.msgT + hash(k, 141) * 0.3, x = cxm + Math.round((hash(k, 142) - 0.5) * 90), y = sy + 34 + Math.round(u * u * 60);
         if (y < y0 + 10) { ctx.fillStyle = '#a8801c'; ctx.fillRect(x - 1, y - 1, 4, 4); ctx.fillStyle = '#e8c040'; ctx.fillRect(x, y, 2, 2); }
       }

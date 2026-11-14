@@ -106,7 +106,8 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
   About me and Impressum (card `#shop`, `SHOP_I`; its leg from About me has no jump, the sky treats About me →
   Impressum as one leg via `SKY_S`; in the worm world its food is a plum). On the cloud a sign says to type
   "jannes ist der beste" into the text field `#cheat`: every time gives 10 coins, without limit (Jannes wanted
-  exactly that). ↓/Esc, ◀ ▶ or a nav button lead back down. The typed text is not stored anywhere.
+  exactly that). Typing something unkind about him ("jannes" plus a word from `UNKIND`) takes away all coins and all bought skins.
+  ↓/Esc, ◀ ▶ or a nav button lead back down. The typed text is not stored anywhere.
   `ITEMS`: rider skins and cart skins bought with `coins`. Riders are defined in `PEOPLE` (CLASSIC; MORGANE: green scarf, old brown leather jacket, black
   trousers, small silver spiral necklace; JOOST: not a person but one giant beer; JAY LAZER, that is Jannes himself: grey jumper, blue jeans,
   crown with many jewels; WOLF: a wolf in a jumper with the flag of Pakistan) and drawn by `makeCart` (in the cart) and `drawPerson` (shop tile). There are no worm
