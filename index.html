@@ -1354,9 +1354,9 @@
     if (k === 'Escape' || k === 'ArrowDown' || k === 's' || k === 'S') { e.preventDefault(); if (!SH.leaving) SH.leaving = 0.001; return true; }
     return false;
   }
-  function shopTap(e) {                          // left third / right third = browse, middle = buy or wear
-    const rc = cv.getBoundingClientRect(), u = (e.clientX - rc.left) / rc.width;
-    if (u < 0.3) shopStep(-1); else if (u > 0.7) shopStep(1); else shopAct();
+  function shopTap(e) {                          // only the big tile in the middle buys or wears; everything beside it browses
+    const rc = cv.getBoundingClientRect(), x = (e.clientX - rc.left) / SC - (VW >> 1);
+    if (x < -22) shopStep(-1); else if (x > 22) shopStep(1); else shopAct();
   }
   function updateShop(dt) {
     SH.t += dt; SH.msgT = Math.max(0, SH.msgT - dt); SH.shake = Math.max(0, SH.shake - dt);
@@ -1417,6 +1417,10 @@
     drawItem(it, cxm + sh, iy, true, t);
     const label = (it.type === 'exit' ? '' : it.type.toUpperCase() + ' - ') + it.name;
     drawText(label, cxm - (textW(label) >> 1), iy - 29, '#1c1c1c');
+    for (let k = 0; k < n; k++) {                  // one dot per thing on offer, so you see how much there is
+      ctx.fillStyle = k === SH.sel ? '#1c1c1c' : ITEMS[k].owned ? '#3f8a3a' : '#ffffff';
+      ctx.fillRect(cxm - n * 2 + k * 4, iy - 35, k === SH.sel ? 3 : 2, k === SH.sel ? 3 : 2);
+    }
     const status = it.type === 'exit' ? 'LEAVE THE SHOP' : !it.owned ? it.price + ' COINS' : worn[it.type] === it ? 'WEARING' : 'OWNED';
     // the counter with the sign
     ctx.fillStyle = '#8a5a2b'; ctx.fillRect(left - 2, cy0, sw + 4, 16);
