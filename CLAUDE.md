@@ -109,7 +109,7 @@ repository root. The parser and renderer live in the "blog (Odds & Ends)" sectio
   exactly that). ↓/Esc, ◀ ▶ or a nav button lead back down. The typed text is not stored anywhere.
   `ITEMS`: rider skins and cart skins bought with `coins`. Riders are defined in `PEOPLE` (CLASSIC; MORGANE: green scarf, old brown leather jacket, black
   trousers, small silver spiral necklace; JOOST: not a person but one giant beer; JAY LAZER, that is Jannes himself: grey jumper, blue jeans,
-  crown with many jewels; WOLF: a wolf in a jumper with a flag of the world, own design) and drawn by `makeCart` (in the cart) and `drawPerson` (shop tile). There are no worm
+  crown with many jewels; WOLF: a wolf in a jumper with the flag of Pakistan) and drawn by `makeCart` (in the cart) and `drawPerson` (shop tile). There are no worm
   A rider can have its own text in the scream bubble of the fall (`scream`): Wolf "GOOGLE EARTH", Joost "APRES SKI".
   Jay Lazer is the first rider on offer; while he is worn, changing direction 7 times within 2.5 s (`flips` in
   `step`) shoots laser beams from his eyes for 2.5 s (`lazT`, drawn with the cart). There are no worm
